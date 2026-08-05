@@ -1,0 +1,465 @@
+<html><head><meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="./"><style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap');
+
+body {
+    font-family: 'Roboto', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f0f0f0;
+    padding: 20px;
+}
+
+.equation-container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin: 20px 0;
+    min-width: 80%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.equation {
+    font-size: 24px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.coefficient-input {
+    width: 40px;
+    height: 30px;
+    margin: 0 5px;
+    text-align: center;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+}
+
+.coefficient-input.correct {
+    border-color: #4CAF50;
+    background-color: #E8F5E9;
+}
+
+.coefficient-input.incorrect {
+    border-color: #f44336;
+    background-color: #FFEBEE;
+}
+
+#next-button, #validate-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 10px;
+}
+
+#next-button {
+    background-color: #2196F3;
+    display: none;
+}
+
+#validate-button {
+    background-color: #4CAF50;
+}
+
+#next-button:hover {
+    background-color: #1976D2;
+}
+
+#validate-button:hover {
+    background-color: #388E3C;
+}
+
+#message {
+    margin: 10px 0;
+    color: #666;
+}
+
+#attempts {
+    margin: 10px 0;
+    color: #f44336;
+}
+
+.progress-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 5px;
+    margin: 20px 0;
+    max-width: 500px;
+}
+
+.question-box {
+    width: 30px;
+    height: 30px;
+    background-color: #ddd;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.question-box.correct {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.question-box.incorrect {
+    background-color: #f44336;
+    color: white;
+}
+
+.stats {
+    margin: 20px 0;
+    text-align: center;
+}
+
+.stats span {
+    margin: 0 10px;
+    padding: 5px 10px;
+    border-radius: 5px;
+}
+
+.correct-count {
+    background-color: #E8F5E9;
+    color: #4CAF50;
+}
+
+.retry-count {
+    background-color: #FFF3E0;
+    color: #ff9800;
+}
+
+.incorrect-count {
+    background-color: #FFEBEE;
+    color: #f44336;
+}
+
+.recap-section {
+    margin-top: 20px;
+    text-align: left;
+    max-width: 600px;
+}
+
+.recap-section h3 {
+    margin-bottom: 8px;
+}
+
+.recap-section ul {
+    padding-left: 20px;
+    margin: 0;
+}
+
+.recap-section li {
+    margin: 4px 0;
+}
+</style>
+
+<style>
+#app-home-button {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  background: #2d2a4a;
+  color: #fff;
+  text-decoration: none;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#app-home-button:hover { background: #423d6e; }
+</style>
+<body><a id="app-home-button" href="index.html">← Accueil</a>
+<div class="equation-container">
+    <div class="equation" id="equation"></div>
+    <div id="message"></div>
+    <div id="attempts"></div>
+    <div>
+        <button id="validate-button">Valider</button>
+        <button id="next-button">Suivant</button>
+    </div>
+</div>
+
+<div class="progress-grid" id="progress-grid"></div>
+<div class="stats">
+    <span class="correct-count">Premier coup: <span id="perfect-count">0</span></span>
+    <span class="retry-count">Après plusieurs essais: <span id="retry-count">0</span></span>
+    <span class="incorrect-count">Échecs: <span id="wrong-count">0</span></span>
+</div>
+<div id="final-recap"></div>
+
+<script>
+const equations = [
+    {
+        equation: "Fe + H₂O → Fe₃O₄ + H₂",
+        coefficients: [3, 4, 1, 4]
+    },
+    {
+        equation: "MnO₄⁻ + C₂O₄²⁻ + H⁺ → Mn²⁺ + CO₂ + H₂O",
+        coefficients: [2, 5, 16, 2, 10, 8]
+    },
+    {
+        equation: "Cr₂O₇²⁻ + SO₃²⁻ + H⁺ → Cr³⁺ + SO₄²⁻ + H₂O",
+        coefficients: [1, 3, 8, 2, 3, 4]
+    },
+    {
+        equation: "MnO₄⁻ + Mn²⁺ + H₂O → MnO₂ + H⁺",
+        coefficients: [2, 3, 2, 5, 4]
+    },
+    {
+        equation: "NO₃⁻ + Fe²⁺ + H⁺ → N₂ + Fe³⁺ + H₂O",
+        coefficients: [2, 10, 12, 1, 10, 6]
+    },
+    {
+        equation: "Cl⁻ + ClO⁻ + H⁺ → Cl₂ + H₂O",
+        coefficients: [1, 1, 2, 1, 1]
+    },
+    {
+        equation: "AsO₃³⁻ + MnO₄⁻ + H⁺ → AsO₄³⁻ + Mn²⁺ + H₂O",
+        coefficients: [5, 2, 6, 5, 2, 3]
+    },
+    {
+        equation: "Cr₂O₇²⁻ + C₂H₅OH + H⁺ → Cr³⁺ + CH₃COOH + H₂O",
+        coefficients: [2, 3, 16, 4, 3, 11]
+    },
+    {
+        equation: "H⁺ + Cr₂O₇²⁻ + Fe²⁺ → Cr³⁺ + Fe³⁺ + H₂O",
+        coefficients: [14, 1, 6, 2, 6, 7]
+    },
+    {
+        equation: "Fe²⁺ + O₂ + H⁺ → Fe³⁺ + H₂O",
+        coefficients: [4, 1, 4, 4, 2]
+    },
+    {
+        equation: "SO₃²⁻ + Hg²⁺ + H₂O → SO₄²⁻ + Hg₂²⁺ + H⁺",
+        coefficients: [1, 2, 1, 1, 1, 2]
+    },
+    {
+        equation: "H₂S + NO₃⁻ + H⁺ → S + NO + H₂O",
+        coefficients: [3, 2, 2, 3, 2, 4]
+    },
+    {
+        equation: "H₂C₂O₄ + MnO₄⁻ + H⁺ → CO₂ + Mn²⁺ + H₂O",
+        coefficients: [5, 2, 6, 10, 2, 8]
+    },
+    {
+        equation: "ClO₃⁻ + SO₃²⁻ → Cl⁻ + SO₄²⁻",
+        coefficients: [1, 3, 1, 3]
+    },
+    {
+        equation: "NO + O₂ → NO₂",
+        coefficients: [2, 1, 2]
+    },
+    {
+        equation: "Cu + NO₃⁻ + H⁺ → Cu²⁺ + NO + H₂O",
+        coefficients: [3, 2, 8, 3, 2, 4]
+    },
+    {
+        equation: "H₂O + Cr + IO₃⁻ → Cr³⁺ + I⁻ + OH⁻",
+        coefficients: [3, 2, 1, 2, 1, 6]
+    },
+    {
+        equation: "MnO₄⁻ + S²⁻ + H₂O → MnO₂ + S + OH⁻",
+        coefficients: [2, 3, 4, 2, 3, 8]
+    },
+    {
+        equation: "NO₂⁻ + MnO₄⁻ + H₂O → NO₃⁻ + MnO₂ + OH⁻",
+        coefficients: [3, 2, 1, 3, 2, 2]
+    },
+    {
+        equation: "I₃⁻ + U⁴⁺ + OH⁻ → I⁻ + UO₂²⁺ + H₂O",
+        coefficients: [1, 1, 4, 3, 1, 2]
+    }
+];
+
+let currentEquationIndex = 0;
+let attemptsLeft = 3;
+let currentInputs = [];
+let questionResults = new Array(equations.length).fill(null);
+let attemptsUsedPerQuestion = new Array(equations.length).fill(0);
+let perfectCount = 0;
+let retryCount = 0;
+let wrongCount = 0;
+
+function displayEquation(equation) {
+    const parts = equation.split(/([+→])/g);
+    let htmlContent = '';
+    
+    parts.forEach((part, index) => {
+        if (part === '+') {
+            htmlContent += ' + ';
+        } else if (part === '→') {
+            htmlContent += ' → ';
+        } else {
+            const trimmedPart = part.trim();
+            if (trimmedPart) {
+                htmlContent += `<input type="number" min="1" class="coefficient-input">${trimmedPart}`;
+            }
+        }
+    });
+    
+    document.getElementById('equation').innerHTML = htmlContent;
+}
+
+function updateProgressGrid() {
+    const grid = document.getElementById('progress-grid');
+    grid.innerHTML = '';
+    
+    for (let i = 0; i < equations.length; i++) {
+        const box = document.createElement('div');
+        box.className = 'question-box';
+        if (questionResults[i] === true) {
+            box.classList.add('correct');
+        } else if (questionResults[i] === false) {
+            box.classList.add('incorrect');
+        }
+        box.textContent = (i + 1);
+        box.addEventListener('click', () => jumpToQuestion(i));
+        grid.appendChild(box);
+    }
+}
+
+function jumpToQuestion(index) {
+    currentEquationIndex = index;
+    attemptsLeft = 3;
+    document.getElementById('message').textContent = '';
+    document.getElementById('attempts').textContent = '';
+    document.getElementById('next-button').style.display = 'none';
+    document.getElementById('validate-button').style.display = 'inline-block';
+    document.getElementById('final-recap').innerHTML = '';
+    displayEquation(equations[currentEquationIndex].equation);
+}
+
+function updateStats() {
+    document.getElementById('perfect-count').textContent = perfectCount;
+    document.getElementById('retry-count').textContent = retryCount;
+    document.getElementById('wrong-count').textContent = wrongCount;
+}
+
+function checkAnswers() {
+    if (attemptsLeft <= 0) return;
+    
+    const inputs = document.querySelectorAll('.coefficient-input');
+    const currentEquation = equations[currentEquationIndex];
+    let allCorrect = true;
+    
+    inputs.forEach((input, index) => {
+        const value = parseInt(input.value);
+        if (value === currentEquation.coefficients[index]) {
+            input.classList.add('correct');
+            input.classList.remove('incorrect');
+        } else {
+            input.classList.add('incorrect');
+            input.classList.remove('correct');
+            allCorrect = false;
+        }
+    });
+    
+    if (allCorrect) {
+        document.getElementById('message').textContent = "Bravo ! C'est correct !";
+        if (questionResults[currentEquationIndex] === null) {
+            questionResults[currentEquationIndex] = true;
+            const attemptsUsed = 3 - attemptsLeft;
+            attemptsUsedPerQuestion[currentEquationIndex] = attemptsUsed;
+            if (attemptsUsed === 0) {
+                perfectCount++;
+            } else {
+                retryCount++;
+            }
+        }
+        document.getElementById('next-button').style.display = 'inline-block';
+    } else {
+        attemptsLeft--;
+        if (attemptsLeft <= 0) {
+            document.getElementById('message').textContent = "Nombre maximum de tentatives atteint. Voici la solution :";
+            showCorrectAnswer();
+            if (questionResults[currentEquationIndex] === null) {
+                questionResults[currentEquationIndex] = false;
+                wrongCount++;
+            }
+            document.getElementById('next-button').style.display = 'inline-block';
+        } else {
+            document.getElementById('attempts').textContent = `Il vous reste ${attemptsLeft} tentative(s)`;
+        }
+    }
+    
+    updateProgressGrid();
+    updateStats();
+}
+
+function showCorrectAnswer() {
+    const inputs = document.querySelectorAll('.coefficient-input');
+    const currentEquation = equations[currentEquationIndex];
+    inputs.forEach((input, index) => {
+        input.value = currentEquation.coefficients[index];
+        input.classList.add('correct');
+        input.disabled = true;
+    });
+}
+
+function nextEquation() {
+    currentEquationIndex++;
+    if (currentEquationIndex < equations.length) {
+        attemptsLeft = 3;
+        document.getElementById('message').textContent = '';
+        document.getElementById('attempts').textContent = '';
+        document.getElementById('next-button').style.display = 'none';
+        displayEquation(equations[currentEquationIndex].equation);
+    } else {
+        showFinalRecap();
+    }
+}
+
+function showFinalRecap() {
+    document.getElementById('message').textContent = "Félicitations ! Vous avez terminé toutes les équations !";
+    document.getElementById('equation').innerHTML = '';
+    document.getElementById('attempts').textContent = '';
+    document.getElementById('next-button').style.display = 'none';
+    document.getElementById('validate-button').style.display = 'none';
+
+    const missed = [];
+    const shaky = [];
+    for (let i = 0; i < equations.length; i++) {
+        if (questionResults[i] === false) {
+            missed.push(equations[i].equation);
+        } else if (questionResults[i] === true && attemptsUsedPerQuestion[i] > 0) {
+            shaky.push(equations[i].equation);
+        }
+    }
+
+    let recapHtml = '';
+    if (missed.length > 0) {
+        recapHtml += `<div class="recap-section"><h3>À revoir (échec après 3 essais) :</h3><ul>${missed.map(e => `<li>${e}</li>`).join('')}</ul></div>`;
+    }
+    if (shaky.length > 0) {
+        recapHtml += `<div class="recap-section"><h3>Réussies après plusieurs essais :</h3><ul>${shaky.map(e => `<li>${e}</li>`).join('')}</ul></div>`;
+    }
+    if (missed.length === 0 && shaky.length === 0) {
+        recapHtml = '<p>Aucune erreur, bravo !</p>';
+    }
+
+    document.getElementById('final-recap').innerHTML = recapHtml;
+}
+
+// Initialize progress grid and stats
+updateProgressGrid();
+updateStats();
+
+document.getElementById('validate-button').addEventListener('click', checkAnswers);
+document.getElementById('next-button').addEventListener('click', nextEquation);
+
+// Démarrer le jeu avec la première équation
+displayEquation(equations[0].equation);
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script></body></html>

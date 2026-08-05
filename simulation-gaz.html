@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html><head><meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="." />
+<meta charset="UTF-8">
+<style>
+canvas {
+  border: 2px solid black;
+  float: left;
+}
+.controls {
+  float: left;
+  margin-left: 20px;
+  width: 220px;
+}
+.slider {
+  width: 200px;
+  margin: 10px 0;
+}
+#histogramCanvas {
+  margin-top: 20px;
+  border: 1px solid #ccc;
+}
+button {
+  padding: 10px 20px;
+  margin: 10px 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+#accumInfo {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #555;
+}
+.legend-text {
+  clear: both;
+  font-size: 13px;
+  color: #444;
+  margin-top: 5px;
+}
+#diffusionPanel {
+  clear: both;
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  background: #f7f7f7;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 15px 20px;
+  margin-top: 20px;
+  width: 760px;
+  font-family: Arial, sans-serif;
+}
+.diffusion-side {
+  flex: 1;
+}
+.diffusion-label {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: #333;
+}
+.diffusion-bar {
+  width: 100%;
+  height: 18px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  border: 1px solid #bbb;
+}
+.diffusion-bar-blue {
+  background-color: rgba(0, 0, 255, 0.6);
+  height: 100%;
+}
+.diffusion-bar-red {
+  background-color: rgba(255, 0, 0, 0.6);
+  height: 100%;
+}
+.diffusion-pct {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #333;
+}
+</style>
+
+<style>
+#app-home-button {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  background: #2d2a4a;
+  color: #fff;
+  text-decoration: none;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#app-home-button:hover { background: #423d6e; }
+</style>
+</head>
+<body><a id="app-home-button" href="index.html">← Accueil</a>
+<canvas id="canvas" width="800" height="600"></canvas>
+<div class="controls">
+  <div>
+    <button id="playPause">Pause</button>
+  </div>
+  <div>
+    <button id="colorLeft">Colorer la moitié gauche</button>
+  </div>
+  <div>
+    <button id="resetColor">Colorer tout en bleu</button>
+  </div>
+  <div>
+    <label>Nombre de molécules: <span id="numParticlesValue">100</span></label><br>
+    <input type="range" class="slider" id="numParticles" min="1" max="500" value="100">
+  </div>
+  <div>
+    <label>Vitesse moyenne: <span id="speedValue">5</span></label><br>
+    <input type="range" class="slider" id="avgSpeed" min="1" max="10" value="5">
+  </div>
+  <div id="accumInfo"></div>
+</div>
+
+<div id="diffusionPanel">
+  <div class="diffusion-side">
+    <div class="diffusion-label">Côté gauche</div>
+    <div class="diffusion-bar">
+      <div class="diffusion-bar-blue" id="leftBarBlue" style="width:100%"></div>
+      <div class="diffusion-bar-red" id="leftBarRed" style="width:0%"></div>
+    </div>
+    <div class="diffusion-pct"><span id="leftPct">100</span>% bleu</div>
+  </div>
+  <div class="diffusion-side">
+    <div class="diffusion-label">Côté droit</div>
+    <div class="diffusion-bar">
+      <div class="diffusion-bar-blue" id="rightBarBlue" style="width:100%"></div>
+      <div class="diffusion-bar-red" id="rightBarRed" style="width:0%"></div>
+    </div>
+    <div class="diffusion-pct"><span id="rightPct">100</span>% bleu</div>
+  </div>
+</div>
+
+<canvas id="histogramCanvas" width="800" height="230"></canvas>
+<div class="legend-text">
+  Bleu/rouge : proportion mesurée de chaque couleur par tranche de vitesse (moyenne glissante sur 20 s). Ligne rouge pointillée : distribution théorique de Maxwell-Boltzmann en 2D. L'axe des vitesses est fixe (indépendant du réglage de vitesse moyenne) pour rendre visible le déplacement du profil avec l'énergie.
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const histCanvas = document.getElementById('histogramCanvas');
+const histCtx = histCanvas.getContext('2d');
+const numParticlesSlider = document.getElementById('numParticles');
+const avgSpeedSlider = document.getElementById('avgSpeed');
+const numParticlesValue = document.getElementById('numParticlesValue');
+const speedValue = document.getElementById('speedValue');
+const playPauseButton = document.getElementById('playPause');
+const colorLeftButton = document.getElementById('colorLeft');
+const resetColorButton = document.getElementById('resetColor');
+const accumInfo = document.getElementById('accumInfo');
+
+const leftBarBlue = document.getElementById('leftBarBlue');
+const leftBarRed = document.getElementById('leftBarRed');
+const rightBarBlue = document.getElementById('rightBarBlue');
+const rightBarRed = document.getElementById('rightBarRed');
+const leftPct = document.getElementById('leftPct');
+const rightPct = document.getElementById('rightPct');
+
+let isRunning = true;
+
+// --- Paramètres de l'histogramme lissé ---
+const BINS = 40;
+const WINDOW_MS = 20000; // fenêtre de lissage : 20 secondes glissantes
+
+// Axe FIXE : basé sur la vitesse max atteignable avec le curseur au maximum (10), marge incluse.
+// Ne dépend plus du réglage courant, pour que le déplacement du profil reste visible.
+const HIST_MAX_SPEED = 45;
+
+let frameQueue = [];  // liste de {t, blue:[...], red:[...]} pour les dernières WINDOW_MS
+let runningBlue = new Array(BINS).fill(0);
+let runningRed = new Array(BINS).fill(0);
+
+class Particle {
+  constructor(x, y, vx, vy, radius) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.radius = radius;
+    this.color = 'blue';
+  }
+
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  getSpeed() {
+    return Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (this.x - this.radius < 0) {
+      this.x = this.radius;
+      this.vx = Math.abs(this.vx);
+    } else if (this.x + this.radius > canvas.width) {
+      this.x = canvas.width - this.radius;
+      this.vx = -Math.abs(this.vx);
+    }
+
+    if (this.y - this.radius < 0) {
+      this.y = this.radius;
+      this.vy = Math.abs(this.vy);
+    } else if (this.y + this.radius > canvas.height) {
+      this.y = canvas.height - this.radius;
+      this.vy = -Math.abs(this.vy);
+    }
+  }
+}
+
+let particles = [];
+
+function resetHistogram() {
+  frameQueue = [];
+  runningBlue = new Array(BINS).fill(0);
+  runningRed = new Array(BINS).fill(0);
+}
+
+function createParticles(num, avgSpeed) {
+  const currentColors = new Map();
+  particles.forEach(p => currentColors.set(p.x < canvas.width/2 ? 'left' : 'right', p.color));
+
+  particles = [];
+  for (let i = 0; i < num; i++) {
+    const radius = 5;
+    const x = Math.random() * (canvas.width - 2 * radius) + radius;
+    const y = Math.random() * (canvas.height - 2 * radius) + radius;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (Math.random() + 0.5) * avgSpeed;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+    const particle = new Particle(x, y, vx, vy, radius);
+
+    if (currentColors.size > 0) {
+      particle.color = x < canvas.width/2 ?
+        currentColors.get('left') || 'blue' :
+        currentColors.get('right') || 'blue';
+    }
+
+    particles.push(particle);
+  }
+
+  // Changement de paramètre => on repart de zéro pour l'accumulation statistique
+  resetHistogram();
+  updateDiffusionPanel();
+}
+
+function colorLeftParticles() {
+  const middleX = canvas.width / 2;
+  particles.forEach(particle => {
+    if (particle.x < middleX) {
+      particle.color = 'red';
+    }
+  });
+  updateDiffusionPanel();
+}
+
+function resetColors() {
+  particles.forEach(particle => {
+    particle.color = 'blue';
+  });
+  updateDiffusionPanel();
+}
+
+function checkCollision(p1, p2) {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  if (distance < p1.radius + p2.radius) {
+    const overlap = (p1.radius + p2.radius - distance) / 2;
+    const moveX = (dx / distance) * overlap;
+    const moveY = (dy / distance) * overlap;
+
+    p1.x -= moveX;
+    p1.y -= moveY;
+    p2.x += moveX;
+    p2.y += moveY;
+
+    const angle = Math.atan2(dy, dx);
+    const sin = Math.sin(angle);
+    const cos = Math.cos(angle);
+
+    const vx1 = p1.vx * cos + p1.vy * sin;
+    const vy1 = p1.vy * cos - p1.vx * sin;
+    const vx2 = p2.vx * cos + p2.vy * sin;
+    const vy2 = p2.vy * cos - p2.vx * sin;
+
+    p1.vx = vx2 * cos - vy1 * sin;
+    p1.vy = vy1 * cos + vx2 * sin;
+    p2.vx = vx1 * cos - vy2 * sin;
+    p2.vy = vy2 * cos + vx1 * sin;
+  }
+}
+
+function recordFrame() {
+  const blueCounts = new Array(BINS).fill(0);
+  const redCounts = new Array(BINS).fill(0);
+  for (const p of particles) {
+    const speed = p.getSpeed();
+    const idx = Math.min(Math.floor((speed / HIST_MAX_SPEED) * BINS), BINS - 1);
+    if (idx < 0) continue;
+    if (p.color === 'red') redCounts[idx]++; else blueCounts[idx]++;
+  }
+
+  const now = performance.now();
+  frameQueue.push({ t: now, blue: blueCounts, red: redCounts });
+  for (let i = 0; i < BINS; i++) {
+    runningBlue[i] += blueCounts[i];
+    runningRed[i] += redCounts[i];
+  }
+
+  while (frameQueue.length && now - frameQueue[0].t > WINDOW_MS) {
+    const old = frameQueue.shift();
+    for (let i = 0; i < BINS; i++) {
+      runningBlue[i] -= old.blue[i];
+      runningRed[i] -= old.red[i];
+    }
+  }
+}
+
+function drawHistogram() {
+  histCtx.clearRect(0, 0, histCanvas.width, histCanvas.height);
+
+  const binWidthSpeed = HIST_MAX_SPEED / BINS;
+  const totalCount = runningBlue.reduce((a, b) => a + b, 0) + runningRed.reduce((a, b) => a + b, 0);
+
+  const relFreqBlue = runningBlue.map(c => totalCount > 0 ? c / totalCount : 0);
+  const relFreqRed = runningRed.map(c => totalCount > 0 ? c / totalCount : 0);
+  const relFreqTotal = relFreqBlue.map((v, i) => v + relFreqRed[i]);
+
+  // Vitesse moyenne mesurée -> paramètre "a" de la loi de Rayleigh (Maxwell-Boltzmann en 2D)
+  let meanSpeed = 0;
+  if (totalCount > 0) {
+    for (let i = 0; i < BINS; i++) {
+      const center = (i + 0.5) * binWidthSpeed;
+      meanSpeed += center * (runningBlue[i] + runningRed[i]);
+    }
+    meanSpeed /= totalCount;
+  }
+  const a = meanSpeed > 0 ? meanSpeed * Math.sqrt(2 / Math.PI) : 1;
+
+  function rayleighPdf(v) {
+    return (v / (a * a)) * Math.exp(-(v * v) / (2 * a * a));
+  }
+
+  const theoBin = [];
+  for (let i = 0; i < BINS; i++) {
+    const center = (i + 0.5) * binWidthSpeed;
+    theoBin.push(rayleighPdf(center) * binWidthSpeed);
+  }
+
+  const maxVal = Math.max(...relFreqTotal, ...theoBin, 0.001);
+
+  const plotLeft = 50;
+  const plotWidth = 700;
+  const plotBottom = 170;
+  const plotHeight = 130;
+
+  // Axes
+  histCtx.beginPath();
+  histCtx.moveTo(plotLeft, plotBottom);
+  histCtx.lineTo(plotLeft + plotWidth, plotBottom);
+  histCtx.moveTo(plotLeft, plotBottom);
+  histCtx.lineTo(plotLeft, plotBottom - plotHeight - 10);
+  histCtx.strokeStyle = 'black';
+  histCtx.stroke();
+
+  // Barres empilées bleu (bas) / rouge (haut)
+  const barWidth = plotWidth / BINS;
+  for (let i = 0; i < BINS; i++) {
+    const hBlue = (relFreqBlue[i] / maxVal) * plotHeight;
+    const hRed = (relFreqRed[i] / maxVal) * plotHeight;
+    const x = plotLeft + i * barWidth;
+
+    histCtx.fillStyle = 'rgba(0, 0, 255, 0.55)';
+    histCtx.fillRect(x, plotBottom - hBlue, barWidth - 1, hBlue);
+
+    histCtx.fillStyle = 'rgba(255, 0, 0, 0.55)';
+    histCtx.fillRect(x, plotBottom - hBlue - hRed, barWidth - 1, hRed);
+  }
+
+  // Courbe théorique
+  histCtx.beginPath();
+  histCtx.strokeStyle = 'black';
+  histCtx.lineWidth = 2;
+  histCtx.setLineDash([6, 4]);
+  const steps = 200;
+  for (let s = 0; s <= steps; s++) {
+    const v = (s / steps) * HIST_MAX_SPEED;
+    const pdfVal = rayleighPdf(v) * binWidthSpeed;
+    const x = plotLeft + (v / HIST_MAX_SPEED) * plotWidth;
+    const y = plotBottom - (pdfVal / maxVal) * plotHeight;
+    if (s === 0) histCtx.moveTo(x, y); else histCtx.lineTo(x, y);
+  }
+  histCtx.stroke();
+  histCtx.setLineDash([]);
+
+  // Labels des axes
+  histCtx.fillStyle = 'black';
+  histCtx.font = '12px Arial';
+  histCtx.fillText('Vitesse', plotLeft + plotWidth / 2 - 15, plotBottom + 20);
+  histCtx.save();
+  histCtx.translate(15, plotBottom - plotHeight / 2);
+  histCtx.rotate(-Math.PI / 2);
+  histCtx.fillText('Fréquence relative', 0, 0);
+  histCtx.restore();
+
+  // Info accumulation
+  const windowCoveredMs = frameQueue.length ? (performance.now() - frameQueue[0].t) : 0;
+  accumInfo.textContent = `Accumulation: ${(windowCoveredMs / 1000).toFixed(1)} s / 20 s`;
+}
+
+function updateDiffusionPanel() {
+  const middleX = canvas.width / 2;
+  let leftBlue = 0, leftRed = 0, rightBlue = 0, rightRed = 0;
+
+  particles.forEach(p => {
+    const isLeft = p.x < middleX;
+    const isBlue = p.color !== 'red';
+    if (isLeft) { if (isBlue) leftBlue++; else leftRed++; }
+    else { if (isBlue) rightBlue++; else rightRed++; }
+  });
+
+  const leftTotal = leftBlue + leftRed;
+  const rightTotal = rightBlue + rightRed;
+
+  const leftBluePct = leftTotal > 0 ? (leftBlue / leftTotal) * 100 : 0;
+  const rightBluePct = rightTotal > 0 ? (rightBlue / rightTotal) * 100 : 0;
+
+  leftBarBlue.style.width = leftBluePct + '%';
+  leftBarRed.style.width = (100 - leftBluePct) + '%';
+  rightBarBlue.style.width = rightBluePct + '%';
+  rightBarRed.style.width = (100 - rightBluePct) + '%';
+
+  leftPct.textContent = leftTotal > 0 ? leftBluePct.toFixed(0) : '—';
+  rightPct.textContent = rightTotal > 0 ? rightBluePct.toFixed(0) : '—';
+}
+
+function drawDivider() {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+  ctx.setLineDash([6, 6]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(canvas.width / 2, 0);
+  ctx.lineTo(canvas.width / 2, canvas.height);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function animate() {
+  if (!isRunning) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < particles.length; i++) {
+    particles[i].update();
+    particles[i].draw();
+
+    for (let j = i + 1; j < particles.length; j++) {
+      checkCollision(particles[i], particles[j]);
+    }
+  }
+
+  drawDivider();
+  recordFrame();
+  drawHistogram();
+  updateDiffusionPanel();
+  requestAnimationFrame(animate);
+}
+
+playPauseButton.addEventListener('click', () => {
+  isRunning = !isRunning;
+  playPauseButton.textContent = isRunning ? 'Pause' : 'Play';
+  if (isRunning) {
+    animate();
+  }
+});
+
+colorLeftButton.addEventListener('click', colorLeftParticles);
+resetColorButton.addEventListener('click', resetColors);
+
+numParticlesSlider.addEventListener('input', (e) => {
+  const num = parseInt(e.target.value);
+  numParticlesValue.textContent = num;
+  createParticles(num, parseFloat(avgSpeedSlider.value));
+});
+
+avgSpeedSlider.addEventListener('input', (e) => {
+  const speed = parseFloat(e.target.value);
+  speedValue.textContent = speed;
+  createParticles(parseInt(numParticlesSlider.value), speed);
+});
+
+createParticles(100, 5);
+animate();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script></body></html>

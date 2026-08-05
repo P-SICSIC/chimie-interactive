@@ -1,0 +1,826 @@
+<html><head><meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href=".">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f0f0f0;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(103,58,183,0.07) 0%, transparent 45%),
+      radial-gradient(circle at 85% 75%, rgba(33,150,243,0.07) 0%, transparent 45%),
+      radial-gradient(circle, #dcdcdc 1.5px, transparent 1.5px);
+    background-size: auto, auto, 26px 26px;
+    padding-bottom: 60px;
+    margin: 0;
+  }
+
+  .page-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+    justify-content: center;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0 20px;
+  }
+
+  .table-area {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .scroll-hint {
+    font-size: 12px;
+    color: #888;
+    margin: 4px 0 8px 20px;
+  }
+
+  .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    max-width: 100%;
+    padding-bottom: 10px;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 220px;
+    flex: 0 0 220px;
+    margin-top: 20px;
+    align-self: flex-start;
+  }
+
+  #toggleExtended {
+    padding: 14px 10px;
+    border-radius: 8px;
+    border: none;
+    background: #673AB7;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  #toggleExtended:hover {
+    background: #5e35b1;
+  }
+  #toggleExtended .sub {
+    display: block;
+    font-size: 11px;
+    font-weight: normal;
+    opacity: 0.85;
+  }
+
+  :root {
+    --cell-size: 60px;
+  }
+
+  .periodic-table {
+    display: grid;
+    grid-template-columns: repeat(18, var(--cell-size));
+    gap: 2px;
+    margin: 20px;
+    width: max-content;
+  }
+
+  .periodic-table.extended {
+    grid-template-columns: repeat(32, var(--cell-size));
+    gap: 2px;
+  }
+
+  .element {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    border: 1px solid #ccc;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #fff;
+    cursor: pointer;
+    position: relative;
+    font-size: 14px;
+  }
+
+  /* Écran court en orientation paysage (typiquement un téléphone à plat) :
+     cases plus petites pour voir plusieurs périodes sans avoir à défiler verticalement */
+  @media (orientation: landscape) and (max-height: 500px) {
+    :root {
+      --cell-size: 40px;
+    }
+    .element {
+      font-size: 10px;
+    }
+    .atomic-number {
+      font-size: 7px;
+    }
+  }
+
+  .element.active {
+    border: 3px solid #673AB7;
+    animation: pulse-glow 1.4s ease-out 2;
+    z-index: 5;
+  }
+
+  @keyframes pulse-glow {
+    0% { box-shadow: 0 0 0 0 rgba(103, 58, 183, 0.55); }
+    70% { box-shadow: 0 0 0 12px rgba(103, 58, 183, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(103, 58, 183, 0); }
+  }
+
+  .element.correct {
+    background-color: #90EE90;
+  }
+
+  .element.incorrect {
+    animation: shake 0.5s;
+    background-color: #ffcdd2;
+  }
+
+  .element.wrong {
+    background-color: #ffcccb;
+  }
+
+  .element.block-gap-left {
+    border-left: 4px solid #555;
+  }
+
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(5px); }
+    50% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+    100% { transform: translateX(0); }
+  }
+
+  .atomic-number {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 10px;
+  }
+
+  .empty {
+    background-color: transparent;
+    border: none;
+  }
+
+  /* Boîte de dialogue : en flux normal juste sous le tableau (s'adapte automatiquement
+     à la hauteur du tableau, que ce soit le mode normal ou étendu avec sa 7e période) */
+  .modal {
+    display: none;
+    position: relative;
+    background-color: white;
+    padding: 20px 35px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    text-align: center;
+    min-width: 260px;
+    max-width: 320px;
+    box-sizing: border-box;
+    margin: 10px auto 0 auto;
+  }
+
+  .modal.modal-floating {
+    position: fixed;
+    margin: 0;
+    z-index: 1000;
+    max-width: 230px;
+    min-width: 200px;
+    padding: 14px 20px;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 6px;
+    right: 12px;
+    cursor: pointer;
+    font-size: 20px;
+    color: #999;
+    line-height: 1;
+  }
+  .modal-close:hover {
+    color: #333;
+  }
+
+  .score {
+    margin: 20px;
+    font-size: 20px;
+  }
+
+  #attempts {
+    color: #f44336;
+    margin-top: 10px;
+  }
+
+  #input-symbol {
+    display: block;
+    width: 80px;
+    box-sizing: border-box;
+    margin: 10px auto;
+    padding: 5px;
+    text-align: center;
+    font-size: 18px;
+  }
+
+  .summary-modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    z-index: 1001;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  .summary-modal.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .summary-modal h2 {
+    margin-bottom: 20px;
+    color: #333;
+  }
+
+  .summary-stats {
+    font-size: 18px;
+    line-height: 1.6;
+  }
+
+  .stats-window {
+    background: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+
+  .stats-window h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+  }
+
+  .stats-window p {
+    margin: 8px 0;
+    color: #666;
+  }
+
+  .confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1002;
+    overflow: hidden;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    top: -20px;
+    opacity: 0.9;
+    animation-name: confetti-fall;
+    animation-timing-function: ease-in;
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0.85; }
+  }
+</style>
+
+<style>
+#app-home-button {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  background: #2d2a4a;
+  color: #fff;
+  text-decoration: none;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#app-home-button:hover { background: #423d6e; }
+</style>
+</head>
+<body><a id="app-home-button" href="index.html">← Accueil</a>
+<div class="score">Score: <span id="score">0</span>/<span id="scoreMax">72</span></div>
+<div class="page-layout">
+  <div class="table-area">
+    <div class="scroll-hint">↔ Faites glisser (ou survolez) le tableau pour voir tous les éléments</div>
+    <div class="table-scroll-wrapper" id="table-scroll-wrapper">
+      <div class="periodic-table" id="periodic-table"></div>
+    </div>
+    <div class="modal" id="modal">
+      <span class="modal-close" onclick="closeModal()">×</span>
+      <h3>Entrez le symbole chimique</h3>
+      <p>Élément numéro: <span id="current-number"></span></p>
+      <input type="text" id="input-symbol" maxlength="2">
+      <div id="attempts"></div>
+      <button onclick="checkAnswer()">Valider</button>
+    </div>
+  </div>
+  <div class="sidebar">
+    <button id="toggleExtended">Activer le mode étendu<span class="sub">(tableau complet, 118 éléments)</span></button>
+    <div class="stats-window">
+      <h3>Statistiques en temps réel</h3>
+      <p>Bonnes réponses du premier coup: <span id="current-perfect">0</span></p>
+      <p>Réponses après plusieurs essais: <span id="current-retry">0</span></p>
+      <p>Mauvaises réponses: <span id="current-wrong">0</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="summary-modal" id="summary-modal">
+  <h2>Félicitations !</h2>
+  <div class="summary-stats">
+    <p>Réponses correctes du premier coup : <span id="perfect-score">0</span></p>
+    <p>Réponses après plusieurs essais : <span id="retry-score">0</span></p>
+    <p>Réponses incorrectes : <span id="wrong-score">0</span></p>
+  </div>
+</div>
+
+<script>
+// --- Disposition de base (18 colonnes, 72 éléments, périodes 1-6, Lu en groupe 3) ---
+const baseLayout = [
+  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+  3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 6, 7, 8, 9, 10,
+  11, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 14, 15, 16, 17, 18,
+  19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+  37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+  55, 56, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86
+];
+
+// --- Disposition étendue (32 colonnes, forme longue, périodes 1-7, tableau complet 118 éléments) ---
+const extendedLayout = [
+  1, ...Array(30).fill(0), 2,
+  3, 4, ...Array(14).fill(0), ...Array(10).fill(0), 5, 6, 7, 8, 9, 10,
+  11, 12, ...Array(14).fill(0), ...Array(10).fill(0), 13, 14, 15, 16, 17, 18,
+  19, 20, ...Array(14).fill(0), 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+  37, 38, ...Array(14).fill(0), 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+  55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86,
+  87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118
+];
+
+const elements = {
+  "1": {symbol: "H", name: "Hydrogène"},
+  "2": {symbol: "He", name: "Hélium"},
+  "3": {symbol: "Li", name: "Lithium"},
+  "4": {symbol: "Be", name: "Béryllium"},
+  "5": {symbol: "B", name: "Bore"},
+  "6": {symbol: "C", name: "Carbone"},
+  "7": {symbol: "N", name: "Azote"},
+  "8": {symbol: "O", name: "Oxygène"},
+  "9": {symbol: "F", name: "Fluor"},
+  "10": {symbol: "Ne", name: "Néon"},
+  "11": {symbol: "Na", name: "Sodium"},
+  "12": {symbol: "Mg", name: "Magnésium"},
+  "13": {symbol: "Al", name: "Aluminium"},
+  "14": {symbol: "Si", name: "Silicium"},
+  "15": {symbol: "P", name: "Phosphore"},
+  "16": {symbol: "S", name: "Soufre"},
+  "17": {symbol: "Cl", name: "Chlore"},
+  "18": {symbol: "Ar", name: "Argon"},
+  "19": {symbol: "K", name: "Potassium"},
+  "20": {symbol: "Ca", name: "Calcium"},
+  "21": {symbol: "Sc", name: "Scandium"},
+  "22": {symbol: "Ti", name: "Titane"},
+  "23": {symbol: "V", name: "Vanadium"},
+  "24": {symbol: "Cr", name: "Chrome"},
+  "25": {symbol: "Mn", name: "Manganèse"},
+  "26": {symbol: "Fe", name: "Fer"},
+  "27": {symbol: "Co", name: "Cobalt"},
+  "28": {symbol: "Ni", name: "Nickel"},
+  "29": {symbol: "Cu", name: "Cuivre"},
+  "30": {symbol: "Zn", name: "Zinc"},
+  "31": {symbol: "Ga", name: "Gallium"},
+  "32": {symbol: "Ge", name: "Germanium"},
+  "33": {symbol: "As", name: "Arsenic"},
+  "34": {symbol: "Se", name: "Sélénium"},
+  "35": {symbol: "Br", name: "Brome"},
+  "36": {symbol: "Kr", name: "Krypton"},
+  "37": {symbol: "Rb", name: "Rubidium"},
+  "38": {symbol: "Sr", name: "Strontium"},
+  "39": {symbol: "Y", name: "Yttrium"},
+  "40": {symbol: "Zr", name: "Zirconium"},
+  "41": {symbol: "Nb", name: "Niobium"},
+  "42": {symbol: "Mo", name: "Molybdène"},
+  "43": {symbol: "Tc", name: "Technétium"},
+  "44": {symbol: "Ru", name: "Ruthénium"},
+  "45": {symbol: "Rh", name: "Rhodium"},
+  "46": {symbol: "Pd", name: "Palladium"},
+  "47": {symbol: "Ag", name: "Argent"},
+  "48": {symbol: "Cd", name: "Cadmium"},
+  "49": {symbol: "In", name: "Indium"},
+  "50": {symbol: "Sn", name: "Étain"},
+  "51": {symbol: "Sb", name: "Antimoine"},
+  "52": {symbol: "Te", name: "Tellure"},
+  "53": {symbol: "I", name: "Iode"},
+  "54": {symbol: "Xe", name: "Xénon"},
+  "55": {symbol: "Cs", name: "Césium"},
+  "56": {symbol: "Ba", name: "Baryum"},
+  "57": {symbol: "La", name: "Lanthane"},
+  "58": {symbol: "Ce", name: "Cérium"},
+  "59": {symbol: "Pr", name: "Praséodyme"},
+  "60": {symbol: "Nd", name: "Néodyme"},
+  "61": {symbol: "Pm", name: "Prométhium"},
+  "62": {symbol: "Sm", name: "Samarium"},
+  "63": {symbol: "Eu", name: "Europium"},
+  "64": {symbol: "Gd", name: "Gadolinium"},
+  "65": {symbol: "Tb", name: "Terbium"},
+  "66": {symbol: "Dy", name: "Dysprosium"},
+  "67": {symbol: "Ho", name: "Holmium"},
+  "68": {symbol: "Er", name: "Erbium"},
+  "69": {symbol: "Tm", name: "Thulium"},
+  "70": {symbol: "Yb", name: "Ytterbium"},
+  "71": {symbol: "Lu", name: "Lutécium"},
+  "72": {symbol: "Hf", name: "Hafnium"},
+  "73": {symbol: "Ta", name: "Tantale"},
+  "74": {symbol: "W", name: "Tungstène"},
+  "75": {symbol: "Re", name: "Rhénium"},
+  "76": {symbol: "Os", name: "Osmium"},
+  "77": {symbol: "Ir", name: "Iridium"},
+  "78": {symbol: "Pt", name: "Platine"},
+  "79": {symbol: "Au", name: "Or"},
+  "80": {symbol: "Hg", name: "Mercure"},
+  "81": {symbol: "Tl", name: "Thallium"},
+  "82": {symbol: "Pb", name: "Plomb"},
+  "83": {symbol: "Bi", name: "Bismuth"},
+  "84": {symbol: "Po", name: "Polonium"},
+  "85": {symbol: "At", name: "Astate"},
+  "86": {symbol: "Rn", name: "Radon"},
+  "87": {symbol: "Fr", name: "Francium"},
+  "88": {symbol: "Ra", name: "Radium"},
+  "89": {symbol: "Ac", name: "Actinium"},
+  "90": {symbol: "Th", name: "Thorium"},
+  "91": {symbol: "Pa", name: "Protactinium"},
+  "92": {symbol: "U", name: "Uranium"},
+  "93": {symbol: "Np", name: "Neptunium"},
+  "94": {symbol: "Pu", name: "Plutonium"},
+  "95": {symbol: "Am", name: "Américium"},
+  "96": {symbol: "Cm", name: "Curium"},
+  "97": {symbol: "Bk", name: "Berkélium"},
+  "98": {symbol: "Cf", name: "Californium"},
+  "99": {symbol: "Es", name: "Einsteinium"},
+  "100": {symbol: "Fm", name: "Fermium"},
+  "101": {symbol: "Md", name: "Mendélévium"},
+  "102": {symbol: "No", name: "Nobélium"},
+  "103": {symbol: "Lr", name: "Lawrencium"},
+  "104": {symbol: "Rf", name: "Rutherfordium"},
+  "105": {symbol: "Db", name: "Dubnium"},
+  "106": {symbol: "Sg", name: "Seaborgium"},
+  "107": {symbol: "Bh", name: "Bohrium"},
+  "108": {symbol: "Hs", name: "Hassium"},
+  "109": {symbol: "Mt", name: "Meitnérium"},
+  "110": {symbol: "Ds", name: "Darmstadtium"},
+  "111": {symbol: "Rg", name: "Roentgenium"},
+  "112": {symbol: "Cn", name: "Copernicium"},
+  "113": {symbol: "Nh", name: "Nihonium"},
+  "114": {symbol: "Fl", name: "Flérovium"},
+  "115": {symbol: "Mc", name: "Moscovium"},
+  "116": {symbol: "Lv", name: "Livermorium"},
+  "117": {symbol: "Ts", name: "Tennesse"},
+  "118": {symbol: "Og", name: "Oganesson"}
+};
+
+let periodicTableLayout = baseLayout;
+let isExtended = false;
+let TOTAL_ELEMENTS = baseLayout.filter(n => n !== 0).length;
+
+let currentElement = null;
+let score = 0;
+let attempts = 0;
+let perfectAnswers = 0;
+let retryAnswers = 0;
+let wrongAnswers = 0;
+let elementAttempts = {};
+
+function createPeriodicTable() {
+  const table = document.getElementById('periodic-table');
+  table.innerHTML = '';
+  table.classList.toggle('extended', isExtended);
+
+  periodicTableLayout.forEach(number => {
+    const div = document.createElement('div');
+    if (number === 0) {
+      div.className = 'element empty';
+    } else {
+      div.className = 'element';
+      if (!isExtended && number === 71) {
+        // Repère visuel : le bloc f (La-Yb, non affichés ici) est "sauté" entre Ba et Lu
+        div.classList.add('block-gap-left');
+      }
+      div.innerHTML = `<span class="atomic-number">${number}</span>`;
+      div.onclick = () => showModal(number);
+    }
+    table.appendChild(div);
+  });
+}
+
+function resetProgress() {
+  score = 0;
+  attempts = 0;
+  perfectAnswers = 0;
+  retryAnswers = 0;
+  wrongAnswers = 0;
+  elementAttempts = {};
+  document.getElementById('score').textContent = '0';
+  document.getElementById('current-perfect').textContent = '0';
+  document.getElementById('current-retry').textContent = '0';
+  document.getElementById('current-wrong').textContent = '0';
+  document.getElementById('modal').style.display = 'none';
+  document.getElementById('summary-modal').classList.remove('show');
+  document.getElementById('summary-modal').style.display = 'none';
+}
+
+document.getElementById('toggleExtended').addEventListener('click', () => {
+  const confirmed = confirm("Changer de mode réinitialise votre progression actuelle. Continuer ?");
+  if (!confirmed) return;
+
+  isExtended = !isExtended;
+  periodicTableLayout = isExtended ? extendedLayout : baseLayout;
+  TOTAL_ELEMENTS = periodicTableLayout.filter(n => n !== 0).length;
+  document.getElementById('scoreMax').textContent = TOTAL_ELEMENTS;
+  document.getElementById('toggleExtended').innerHTML = isExtended
+    ? 'Revenir au mode de base<span class="sub">(72 éléments)</span>'
+    : 'Activer le mode étendu<span class="sub">(tableau complet, 118 éléments)</span>';
+
+  resetProgress();
+  createPeriodicTable();
+});
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  document.querySelectorAll('.element.active').forEach(el => el.classList.remove('active'));
+}
+
+function isMobileLayout() {
+  return window.matchMedia('(max-width: 700px)').matches;
+}
+
+function elementFullyVisible(el) {
+  const r = el.getBoundingClientRect();
+  return r.top >= 0 && r.left >= 0 && r.bottom <= window.innerHeight && r.right <= window.innerWidth;
+}
+
+function positionFloatingModal(elementDiv) {
+  const modal = document.getElementById('modal');
+  const rect = elementDiv.getBoundingClientRect();
+  const mw = modal.offsetWidth || 230;
+  const mh = modal.offsetHeight || 200;
+  const margin = 8;
+
+  let left = rect.left;
+  if (left + mw > window.innerWidth - margin) left = window.innerWidth - mw - margin;
+  if (left < margin) left = margin;
+
+  let top = rect.bottom + margin;
+  if (top + mh > window.innerHeight - margin) {
+    top = rect.top - mh - margin;
+  }
+  if (top < margin) top = margin;
+
+  modal.style.left = left + 'px';
+  modal.style.top = top + 'px';
+}
+
+function findElementDiv(number) {
+  return document.querySelector(`.element:not(.empty):nth-child(${periodicTableLayout.indexOf(number) + 1})`);
+}
+
+function showModal(number) {
+  currentElement = number;
+  const elementDiv = findElementDiv(number);
+  const mobile = isMobileLayout();
+
+  const openDialog = () => {
+    document.querySelectorAll('.element.active').forEach(el => el.classList.remove('active'));
+    if (elementDiv) elementDiv.classList.add('active');
+
+    if (!elementAttempts[number]) {
+      elementAttempts[number] = 0;
+    }
+    attempts = elementAttempts[number];
+
+    const modal = document.getElementById('modal');
+    const input = document.getElementById('input-symbol');
+    const attemptsDiv = document.getElementById('attempts');
+    const currentNumberSpan = document.getElementById('current-number');
+
+    if (attempts < 3) {
+      modal.classList.toggle('modal-floating', mobile);
+      modal.style.display = 'block';
+      input.value = '';
+      attemptsDiv.textContent = `Chances restantes: ${3 - attempts}/3`;
+      currentNumberSpan.textContent = number;
+      if (mobile && elementDiv) positionFloatingModal(elementDiv);
+
+      // preventScroll : évite que le navigateur ne fasse défiler la page tout seul
+      // pour "remonter" le champ au-dessus du clavier, ce qui pouvait pousser
+      // la case sélectionnée hors de l'écran
+      if (input.focus) {
+        try {
+          input.focus({ preventScroll: true });
+        } catch (e) {
+          input.focus();
+        }
+      }
+    } else {
+      if (elementDiv && !elementDiv.classList.contains('correct')) {
+        const correctAnswer = elements[currentElement].symbol;
+        elementDiv.innerHTML = `<span class="atomic-number">${currentElement}</span>${correctAnswer}`;
+        elementDiv.classList.add('correct');
+        elementDiv.classList.add('wrong');
+        elementDiv.classList.remove('active');
+        elementDiv.onclick = null;
+        wrongAnswers++;
+        document.getElementById('current-wrong').textContent = wrongAnswers;
+
+        const nextElement = findNextElement(currentElement);
+        if (nextElement) {
+          setTimeout(() => showModal(nextElement), 100);
+        }
+      }
+    }
+  };
+
+  // On ne déclenche un défilement que si la case n'est pas déjà visible à l'écran,
+  // pour éviter les sauts de défilement inutiles et désorientants
+  if (elementDiv && !elementFullyVisible(elementDiv)) {
+    elementDiv.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    setTimeout(openDialog, mobile ? 320 : 150);
+  } else {
+    openDialog();
+  }
+}
+
+function findNextElement(currentElement) {
+  const currentIndex = periodicTableLayout.indexOf(currentElement);
+  for (let i = currentIndex + 1; i < periodicTableLayout.length; i++) {
+    const nextNumber = periodicTableLayout[i];
+    if (nextNumber !== 0) {
+      const elementDiv = document.querySelector(`.element:not(.empty):nth-child(${i + 1})`);
+      if (!elementDiv.classList.contains('correct')) {
+        return nextNumber;
+      }
+    }
+  }
+  return null;
+}
+
+function checkAnswer() {
+  const input = document.getElementById('input-symbol');
+  const userAnswer = input.value.trim();
+  const correctAnswer = elements[currentElement].symbol;
+  const attemptsDiv = document.getElementById('attempts');
+  const elementDiv = document.querySelector(`.element:not(.empty):nth-child(${periodicTableLayout.indexOf(currentElement) + 1})`);
+
+  elementAttempts[currentElement]++;
+  attempts = elementAttempts[currentElement];
+
+  if (userAnswer.toUpperCase() === correctAnswer.toUpperCase()) {
+    elementDiv.innerHTML = `<span class="atomic-number">${currentElement}</span>${correctAnswer}`;
+    elementDiv.classList.add('correct');
+    elementDiv.classList.remove('incorrect');
+    elementDiv.classList.remove('active');
+    elementDiv.onclick = null;
+    score++;
+    document.getElementById('score').textContent = score;
+    document.getElementById('modal').style.display = 'none';
+
+    if (attempts === 1) {
+      perfectAnswers++;
+      document.getElementById('current-perfect').textContent = perfectAnswers;
+    } else {
+      retryAnswers++;
+      document.getElementById('current-retry').textContent = retryAnswers;
+    }
+
+    if (score + wrongAnswers === TOTAL_ELEMENTS) {
+      triggerConfetti();
+      setTimeout(() => {
+        document.getElementById('perfect-score').textContent = perfectAnswers;
+        document.getElementById('retry-score').textContent = retryAnswers;
+        document.getElementById('wrong-score').textContent = wrongAnswers;
+        showSummaryModal();
+      }, 1600);
+    }
+
+    const nextElement = findNextElement(currentElement);
+    if (nextElement) {
+      setTimeout(() => showModal(nextElement), 100);
+    }
+  } else {
+    elementDiv.classList.add('incorrect');
+    setTimeout(() => elementDiv.classList.remove('incorrect'), 500);
+
+    if (attempts >= 3) {
+      wrongAnswers++;
+      elementDiv.innerHTML = `<span class="atomic-number">${currentElement}</span>${correctAnswer}`;
+      elementDiv.classList.add('correct');
+      elementDiv.classList.add('wrong');
+      elementDiv.classList.remove('incorrect');
+      elementDiv.classList.remove('active');
+      elementDiv.onclick = null;
+      document.getElementById('modal').style.display = 'none';
+      document.getElementById('current-wrong').textContent = wrongAnswers;
+
+      if (score + wrongAnswers === TOTAL_ELEMENTS) {
+        triggerConfetti();
+        setTimeout(() => {
+          document.getElementById('perfect-score').textContent = perfectAnswers;
+          document.getElementById('retry-score').textContent = retryAnswers;
+          document.getElementById('wrong-score').textContent = wrongAnswers;
+          showSummaryModal();
+        }, 1600);
+      }
+
+      const nextElement = findNextElement(currentElement);
+      if (nextElement) {
+        setTimeout(() => showModal(nextElement), 100);
+      }
+    } else {
+      attemptsDiv.textContent = `Chances restantes: ${3 - attempts}/3`;
+      input.value = '';
+      if (input.focus) {
+        try {
+          input.focus({ preventScroll: true });
+        } catch (e) {
+          input.focus();
+        }
+      }
+    }
+  }
+}
+
+function showSummaryModal() {
+  const summaryModal = document.getElementById('summary-modal');
+  summaryModal.style.display = 'block';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => summaryModal.classList.add('show'));
+  });
+}
+
+function triggerConfetti() {
+  const colors = ['#f44336', '#2196F3', '#4CAF50', '#FFC107', '#9C27B0', '#FF9800'];
+  const container = document.createElement('div');
+  container.className = 'confetti-container';
+  document.body.appendChild(container);
+
+  const count = 70;
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    const size = 6 + Math.random() * 6;
+    piece.style.left = (Math.random() * 100) + 'vw';
+    piece.style.width = size + 'px';
+    piece.style.height = (size * 1.6) + 'px';
+    piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (1.4 + Math.random() * 1.2) + 's';
+    piece.style.animationDelay = (Math.random() * 0.4) + 's';
+    container.appendChild(piece);
+  }
+
+  setTimeout(() => container.remove(), 3200);
+}
+
+// Force la casse chimique correcte en temps réel (1ère lettre maj, 2e min), sans avoir à jouer avec Shift
+document.getElementById('input-symbol').addEventListener('input', function() {
+  let v = this.value.replace(/[^a-zA-Z]/g, '').slice(0, 2);
+  if (v.length > 0) {
+    v = v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
+  }
+  this.value = v;
+});
+
+document.getElementById('input-symbol').addEventListener('keyup', function(event) {
+  if (event.key === 'Enter') {
+    checkAnswer();
+  }
+});
+
+createPeriodicTable();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script></body>
+</html>

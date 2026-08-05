@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2d2a4a">
+<title>Chimie Interactive</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root {
+    --ink: #1c1f2e;
+    --navy: #2d2a4a;
+    --lab-blue: #215a82;
+    --amber: #ffa726;
+    --paper: #f4f6fa;
+    --card-bg: #ffffff;
+    --muted: #6b7086;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", ui-sans-serif, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Halo de particules discret en fond, clin d'oeil au mouvement brownien */
+  .particle-field {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  .particle-field span {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lab-blue);
+    opacity: 0.18;
+    animation: drift 18s ease-in-out infinite;
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(20px, -24px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .particle-field span { animation: none; }
+  }
+
+  header {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(160deg, var(--navy) 0%, var(--lab-blue) 100%);
+    color: white;
+    padding: 56px 24px 70px 24px;
+    text-align: center;
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(28px, 6vw, 42px);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    margin: 14px auto 0 auto;
+    max-width: 480px;
+    color: rgba(255,255,255,0.82);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: -40px auto 60px auto;
+    padding: 0 20px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 22px 22px 24px 22px;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 8px 24px rgba(28, 31, 46, 0.10);
+    border-top: 4px solid var(--accent, var(--lab-blue));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .card:hover, .card:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(28, 31, 46, 0.16);
+    outline: none;
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .card-index {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .card-icon {
+    font-size: 26px;
+    line-height: 1;
+  }
+
+  .card h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .card p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="particle-field" id="particleField"></div>
+
+<header>
+  <div class="eyebrow">Boîte à outils</div>
+  <h1>Chimie Interactive</h1>
+  <p>Quatre exercices pour réviser la chimie générale — tableau périodique, diffusion moléculaire, nomenclature et équilibrage rédox.</p>
+</header>
+
+<main>
+  <div class="grid">
+    <a class="card" style="--accent:#215a82" href="tableau-periodique.html">
+      <div class="card-top">
+        <span class="card-index">01</span>
+        <span class="card-icon">🧪</span>
+      </div>
+      <h2>Tableau périodique</h2>
+      <p>Retrouvez chaque élément à sa place, avec un mode étendu incluant le bloc f et la période 7.</p>
+    </a>
+
+    <a class="card" style="--accent:#3d7a5c" href="simulation-gaz.html">
+      <div class="card-top">
+        <span class="card-index">02</span>
+        <span class="card-icon">💨</span>
+      </div>
+      <h2>Diffusion &amp; mouvement brownien</h2>
+      <p>Observez la diffusion moléculaire et la distribution des vitesses en temps réel.</p>
+    </a>
+
+    <a class="card" style="--accent:#a34b8c" href="nomenclature.html">
+      <div class="card-top">
+        <span class="card-index">03</span>
+        <span class="card-icon">🔤</span>
+      </div>
+      <h2>Nomenclature</h2>
+      <p>Entraînez-vous à passer de la formule au nom, sur ions, sels, acides et composés covalents.</p>
+    </a>
+
+    <a class="card" style="--accent:#c4791f" href="equilibre-redox.html">
+      <div class="card-top">
+        <span class="card-index">04</span>
+        <span class="card-icon">⚖️</span>
+      </div>
+      <h2>Équilibrage rédox</h2>
+      <p>Équilibrez 20 réactions d'oxydoréduction en milieu acide ou basique.</p>
+    </a>
+  </div>
+</main>
+
+<footer>Chimie Interactive — usage pédagogique. N'hésitez pas à me faire un retour.</footer>
+
+<script>
+  // Petit champ de particules décoratif (léger clin d'œil au programme de diffusion)
+  const field = document.getElementById('particleField');
+  const count = window.innerWidth < 600 ? 10 : 18;
+  for (let i = 0; i < count; i++) {
+    const dot = document.createElement('span');
+    dot.style.left = Math.random() * 100 + '%';
+    dot.style.top = Math.random() * 100 + '%';
+    dot.style.animationDelay = (Math.random() * 10) + 's';
+    dot.style.animationDuration = (14 + Math.random() * 10) + 's';
+    field.appendChild(dot);
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+
+</body>
+</html>

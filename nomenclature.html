@@ -1,0 +1,807 @@
+<html><head><meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="/">
+<meta charset="UTF-8">
+<title>Quiz des Structures Chimiques</title>
+<style>
+    body {
+        font-family: 'Arial', sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f0f5f9;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .summary-box {
+        width: 250px;
+        height: fit-content;
+        background-color: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    .container {
+        position: relative;
+        margin-top: 20px;
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        display: flex;
+        gap: 20px;
+    }
+    .main-content {
+        flex: 1;
+    }
+    .molecule {
+        width: 300px;
+        height: 300px;
+        margin: 20px auto;
+    }
+    .input-zone {
+        text-align: center;
+        margin: 20px 0;
+    }
+    input[type="text"] {
+        padding: 10px;
+        font-size: 16px;
+        width: 300px;
+        margin-right: 10px;
+    }
+    button {
+        padding: 10px 20px;
+        font-size: 16px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    button:hover {
+        background-color: #45a049;
+    }
+    .feedback {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 5px;
+    }
+    .correct {
+        background-color: #dff0d8;
+        color: #3c763d;
+    }
+    .incorrect {
+        background-color: #f2dede;
+        color: #a94442;
+    }
+    .stats {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #e7f3fe;
+        border-radius: 5px;
+    }
+    .progress-squares {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin: 20px 0;
+        justify-content: center;
+        max-width: 1000px;
+    }
+    .square {
+        width: 25px;
+        height: 25px;
+        background-color: #ddd;
+        cursor: pointer;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+    }
+    .square.correct {
+        background-color: #4CAF50;
+    }
+    .square.incorrect {
+        background-color: #f44336;
+    }
+    .square.current {
+        border: 2px solid #2196F3;
+    }
+    .summary-box h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #333;
+    }
+    .summary-detail {
+        margin: 5px 0;
+    }
+    .good-answers {
+        color: #4CAF50;
+    }
+    .wrong-answers {
+        color: #f44336;
+    }
+    .missed-review {
+        margin-top: 15px;
+        text-align: left;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .missed-review ul {
+        columns: 2;
+    }
+</style>
+
+<style>
+#app-home-button {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  background: #2d2a4a;
+  color: #fff;
+  text-decoration: none;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#app-home-button:hover { background: #423d6e; }
+</style>
+</head>
+<body><a id="app-home-button" href="index.html">← Accueil</a>
+    <div class="container">
+        <div class="main-content">
+            <h1>Quiz des Structures Chimiques</h1>
+            <div class="stats">
+                Question: <span id="questionNumber">1</span>/<span id="totalQuestionsDisplay">40</span>
+                Score: <span id="score">0</span>
+            </div>
+            <div class="molecule" id="moleculeDisplay"></div>
+            <div class="input-zone">
+                <input type="text" id="answer" placeholder="Entrez le nom de la molécule">
+                <button onclick="checkAnswer()">Vérifier</button>
+            </div>
+            <div id="feedback" class="feedback"></div>
+            <div id="progressSquares" class="progress-squares"></div>
+        </div>
+        
+        <div class="summary-box">
+            <h3>Récapitulatif</h3>
+            <div class="summary-detail">
+                Bonnes réponses: <span id="goodAnswers" class="good-answers">0</span>
+            </div>
+            <div class="summary-detail">
+                Mauvaises réponses: <span id="wrongAnswers" class="wrong-answers">0</span>
+            </div>
+            <div class="summary-detail">
+                Réponses avec plusieurs essais: <span id="multipleAttempts" style="color: #ff9800">0</span>
+            </div>
+        </div>
+    </div>
+
+<script>
+const molecules = [
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">NO₃⁻</text>
+        </svg>`,
+        name: "nitrate",
+        alternates: ["no3-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">SO₄²⁻</text>
+        </svg>`,
+        name: "sulfate",
+        alternates: ["so42-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">NO₂⁻</text>
+        </svg>`,
+        name: "nitrite",
+        alternates: ["no2-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">Cl⁻</text>
+        </svg>`,
+        name: "chlorure",
+        alternates: ["cl-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">Br⁻</text>
+        </svg>`,
+        name: "bromure",
+        alternates: ["br-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">I⁻</text>
+        </svg>`,
+        name: "iodure",
+        alternates: ["i-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">CO₃²⁻</text>
+        </svg>`,
+        name: "carbonate",
+        alternates: ["co32-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">HCO₃⁻</text>
+        </svg>`,
+        name: "hydrogenocarbonate",
+        alternates: ["hco3-", "bicarbonate"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">PO₄³⁻</text>
+        </svg>`,
+        name: "phosphate",
+        alternates: ["po43-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">S²⁻</text>
+        </svg>`,
+        name: "sulfure",
+        alternates: ["s2-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">OH⁻</text>
+        </svg>`,
+        name: "hydroxyde",
+        alternates: ["oh-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">NH₄⁺</text>
+        </svg>`,
+        name: "ammonium",
+        alternates: ["nh4+"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">H₃O⁺</text>
+        </svg>`,
+        name: "oxonium",
+        alternates: ["h3o+"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">CN⁻</text>
+        </svg>`,
+        name: "cyanure",
+        alternates: ["cn-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">H⁻</text>
+        </svg>`,
+        name: "hydrure",
+        alternates: ["h-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">S₂O₃²⁻</text>
+        </svg>`,
+        name: "thiosulfate",
+        alternates: ["s2o32-"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">NaCl</text>
+        </svg>`,
+        name: "chlorure de sodium",
+        alternates: ["nacl"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">KBr</text>
+        </svg>`,
+        name: "bromure de potassium",
+        alternates: ["kbr"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">CaCl₂</text>
+        </svg>`,
+        name: "chlorure de calcium",
+        alternates: ["cacl2"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">MgSO₄</text>
+        </svg>`,
+        name: "sulfate de magnésium",
+        alternates: ["mgs04"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">Na₂CO₃</text>
+        </svg>`,
+        name: "carbonate de sodium",
+        alternates: ["na2co3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">K₂SO₄</text>
+        </svg>`,
+        name: "sulfate de potassium",
+        alternates: ["k2so4"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">CaBr₂</text>
+        </svg>`,
+        name: "bromure de calcium",
+        alternates: ["cabr2"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">NaI</text>
+        </svg>`,
+        name: "iodure de sodium",
+        alternates: ["nai"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">KNO₃</text>
+        </svg>`,
+        name: "nitrate de potassium",
+        alternates: ["kno3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">NH₄Cl</text>
+        </svg>`,
+        name: "chlorure d'ammonium",
+        alternates: ["nh4cl"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">CuSO₄</text>
+        </svg>`,
+        name: "sulfate de cuivre(II)",
+        alternates: ["cus04", "sulfate de cuivre"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">AgNO₃</text>
+        </svg>`,
+        name: "nitrate d'argent",
+        alternates: ["agno3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">Fe₂(SO₄)₃</text>
+        </svg>`,
+        name: "sulfate de fer(III)",
+        alternates: ["fe2so43"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">ZnCl₂</text>
+        </svg>`,
+        name: "chlorure de zinc",
+        alternates: ["zncl2"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">BaCl₂</text>
+        </svg>`,
+        name: "chlorure de baryum",
+        alternates: ["bacl2"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">Li₂CO₃</text>
+        </svg>`,
+        name: "carbonate de lithium",
+        alternates: ["li2co3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">AlCl₃</text>
+        </svg>`,
+        name: "chlorure d'aluminium",
+        alternates: ["alcl3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">KMnO₄</text>
+        </svg>`,
+        name: "permanganate de potassium",
+        alternates: ["kmno4"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">Na₃PO₄</text>
+        </svg>`,
+        name: "phosphate de sodium",
+        alternates: ["na3po4"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">(NH₄)₂SO₄</text>
+        </svg>`,
+        name: "sulfate d'ammonium",
+        alternates: ["(nh4)2so4"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">HCl</text>
+        </svg>`,
+        name: "acide chlorhydrique",
+        alternates: ["hcl"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">HBr</text>
+        </svg>`,
+        name: "acide bromhydrique",
+        alternates: ["hbr"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">HI</text>
+        </svg>`,
+        name: "acide iodhydrique",
+        alternates: ["hi"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">HF</text>
+        </svg>`,
+        name: "acide fluorhydrique",
+        alternates: ["hf"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">H₂S</text>
+        </svg>`,
+        name: "acide sulfhydrique",
+        alternates: ["h2s", "sulfure d'hydrogene", "sulfure d'hydrogène"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">HCN</text>
+        </svg>`,
+        name: "acide cyanhydrique",
+        alternates: ["hcn"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">HNO₃</text>
+        </svg>`,
+        name: "acide nitrique",
+        alternates: ["hno3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">HNO₂</text>
+        </svg>`,
+        name: "acide nitreux",
+        alternates: ["hno2"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">H₂SO₄</text>
+        </svg>`,
+        name: "acide sulfurique",
+        alternates: ["h2so4"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">H₂SO₃</text>
+        </svg>`,
+        name: "acide sulfureux",
+        alternates: ["h2so3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">H₃PO₄</text>
+        </svg>`,
+        name: "acide phosphorique",
+        alternates: ["h3po4"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">H₂CO₃</text>
+        </svg>`,
+        name: "acide carbonique",
+        alternates: ["h2co3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">CO</text>
+        </svg>`,
+        name: "monoxyde de carbone",
+        alternates: ["co"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">CO₂</text>
+        </svg>`,
+        name: "dioxyde de carbone",
+        alternates: ["co2"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">SO₂</text>
+        </svg>`,
+        name: "dioxyde de soufre",
+        alternates: ["so2"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">SO₃</text>
+        </svg>`,
+        name: "trioxyde de soufre",
+        alternates: ["so3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">NO</text>
+        </svg>`,
+        name: "monoxyde d'azote",
+        alternates: ["no"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">NO₂</text>
+        </svg>`,
+        name: "dioxyde d'azote",
+        alternates: ["no2"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">N₂O</text>
+        </svg>`,
+        name: "monoxyde de diazote",
+        alternates: ["n2o"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">N₂O₅</text>
+        </svg>`,
+        name: "pentoxyde de diazote",
+        alternates: ["n2o5"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">PCl₃</text>
+        </svg>`,
+        name: "trichlorure de phosphore",
+        alternates: ["pcl3"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">PCl₅</text>
+        </svg>`,
+        name: "pentachlorure de phosphore",
+        alternates: ["pcl5"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">SF₆</text>
+        </svg>`,
+        name: "hexafluorure de soufre",
+        alternates: ["sf6"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">CCl₄</text>
+        </svg>`,
+        name: "tétrachlorure de carbone",
+        alternates: ["ccl4"]
+    },
+    {
+        svg: `<svg width="300" height="300" viewBox="0 0 300 300">
+            <text x="130" y="150" font-size="24">FeSO₄</text>
+        </svg>`,
+        name: "sulfate de fer(II)",
+        alternates: ["feso4"]
+    }
+];
+
+const QUESTIONS_PER_GAME = Math.min(30, molecules.length);
+const TOTAL_QUESTIONS = QUESTIONS_PER_GAME;
+
+let currentMolecule = 0;
+let attempts = 0;
+let score = 0;
+let questionNumber = 1;
+let questionOrder = [];
+let questionStatus = Array(TOTAL_QUESTIONS).fill('pending');
+let answeredQuestions = Array(TOTAL_QUESTIONS).fill(false);
+let attemptsPerQuestion = Array(TOTAL_QUESTIONS).fill(0);
+let multipleAttemptsCount = 0;
+
+function shuffleQuestions() {
+    // Mélange complet du stock de molécules (Fisher-Yates), puis on ne garde
+    // que les QUESTIONS_PER_GAME premières : pas de répétition dans une partie.
+    const indices = [...Array(molecules.length).keys()];
+    for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    questionOrder = indices.slice(0, QUESTIONS_PER_GAME);
+}
+
+function updateProgressSquares() {
+    const container = document.getElementById('progressSquares');
+    container.innerHTML = '';
+    for(let i = 0; i < TOTAL_QUESTIONS; i++) {
+        const square = document.createElement('div');
+        square.className = 'square';
+        if(questionStatus[i] === 'correct') {
+            square.classList.add('correct');
+        } else if(questionStatus[i] === 'incorrect') {
+            square.classList.add('incorrect');
+        }
+        if(i === questionNumber - 1) {
+            square.classList.add('current');
+        }
+        square.textContent = i + 1;
+        square.onclick = () => jumpToQuestion(i);
+        container.appendChild(square);
+    }
+}
+
+function jumpToQuestion(index) {
+    if(index < questionNumber - 1) {
+        questionNumber = index + 1;
+        currentMolecule = index;
+        attempts = 0;
+        displayMolecule();
+        updateProgressSquares();
+    }
+}
+
+function displayMolecule() {
+    document.getElementById('moleculeDisplay').innerHTML = molecules[questionOrder[currentMolecule]].svg;
+    document.getElementById('questionNumber').textContent = questionNumber;
+    document.getElementById('score').textContent = score;
+    document.getElementById('answer').value = '';
+    document.getElementById('feedback').textContent = '';
+    updateProgressSquares();
+    updateSummary();
+}
+
+function updateSummary() {
+    const goodAnswers = questionStatus.filter(status => status === 'correct').length;
+    const wrongAnswers = questionStatus.filter(status => status === 'incorrect').length;
+    document.getElementById('goodAnswers').textContent = goodAnswers;
+    document.getElementById('wrongAnswers').textContent = wrongAnswers;
+    document.getElementById('multipleAttempts').textContent = multipleAttemptsCount;
+}
+
+function normalizeAnswer(str) {
+    return str
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retire les accents
+        .replace(/[^a-z0-9]/g, ''); // retire espaces, apostrophes, parenthèses, tirets...
+}
+
+function checkAnswer() {
+    const userAnswer = normalizeAnswer(document.getElementById('answer').value);
+    const correctAnswer = molecules[questionOrder[currentMolecule]].name;
+    const alternateAnswers = molecules[questionOrder[currentMolecule]].alternates;
+    
+    if (userAnswer === normalizeAnswer(correctAnswer) || alternateAnswers.some(alt => normalizeAnswer(alt) === userAnswer)) {
+        document.getElementById('feedback').innerHTML = 'Correct! ✅';
+        document.getElementById('feedback').className = 'feedback correct';
+        questionStatus[questionNumber - 1] = 'correct';
+        attemptsPerQuestion[questionNumber - 1] = attempts;
+        if(!answeredQuestions[questionNumber - 1]) {
+            score++;
+            answeredQuestions[questionNumber - 1] = true;
+            if (attempts > 0) {
+                multipleAttemptsCount++;
+            }
+        }
+        nextMolecule();
+    } else {
+        attempts++;
+        if (attempts >= 3) {
+            document.getElementById('feedback').innerHTML = `Incorrect. La bonne réponse était: ${correctAnswer}`;
+            document.getElementById('feedback').className = 'feedback incorrect';
+            questionStatus[questionNumber - 1] = 'incorrect';
+            nextMolecule();
+        } else {
+            document.getElementById('feedback').innerHTML = `Incorrect. Il vous reste ${3-attempts} essai(s).`;
+            document.getElementById('feedback').className = 'feedback incorrect';
+        }
+    }
+    document.getElementById('score').textContent = score;
+    updateProgressSquares();
+    updateSummary();
+}
+
+function nextMolecule() {
+    attempts = 0;
+    currentMolecule++;
+    questionNumber++;
+    
+    if (questionNumber > TOTAL_QUESTIONS) {
+        finishGame();
+    } else {
+        displayMolecule();
+    }
+}
+
+function finishGame() {
+    const goodAnswers = questionStatus.filter(status => status === 'correct').length;
+    const wrongAnswers = questionStatus.filter(status => status === 'incorrect').length;
+
+    const missedNames = [];
+    const shakyNames = [];
+    for (let i = 0; i < questionOrder.length; i++) {
+        if (questionStatus[i] === 'incorrect') {
+            missedNames.push(molecules[questionOrder[i]].name);
+        } else if (questionStatus[i] === 'correct' && attemptsPerQuestion[i] > 0) {
+            shakyNames.push(molecules[questionOrder[i]].name);
+        }
+    }
+
+    const missedListHtml = missedNames.length > 0
+        ? `<div class="missed-review">
+             <h3>À revoir (erreur non corrigée) :</h3>
+             <ul>${missedNames.map(name => `<li>${name}</li>`).join('')}</ul>
+           </div>`
+        : '';
+
+    const shakyListHtml = shakyNames.length > 0
+        ? `<div class="missed-review">
+             <h3>Réussies après une ou deux erreurs :</h3>
+             <ul>${shakyNames.map(name => `<li>${name}</li>`).join('')}</ul>
+           </div>`
+        : '';
+
+    const noIssuesHtml = (missedNames.length === 0 && shakyNames.length === 0)
+        ? '<p>Aucune erreur, bravo !</p>'
+        : '';
+
+    document.querySelector('.container').innerHTML = `
+        <h1>Quiz Terminé!</h1>
+        <div class="stats">
+            <p>Score final: ${score}/${TOTAL_QUESTIONS}</p>
+            <p>Bonnes réponses: ${goodAnswers}</p>
+            <p>Mauvaises réponses: ${wrongAnswers}</p>
+            <p>Réponses avec plusieurs essais: ${multipleAttemptsCount}</p>
+        </div>
+        ${missedListHtml}
+        ${shakyListHtml}
+        ${noIssuesHtml}
+        <button onclick="location.reload()">Rejouer</button>
+    `;
+}
+
+document.getElementById('answer').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        checkAnswer();
+    }
+});
+
+shuffleQuestions();
+document.getElementById('totalQuestionsDisplay').textContent = TOTAL_QUESTIONS;
+displayMolecule();
+updateSummary();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script></body>
+</html>
