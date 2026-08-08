@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chimie-interactive-v1';
+const CACHE_NAME = 'chimie-interactive-v2';
 const APP_SHELL = [
   'index.html',
   'tableau-periodique.html',
@@ -26,23 +26,22 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Stratégie "cache d'abord, réseau en secours" : l'app fonctionne hors-ligne
-// une fois visitée au moins une fois, et se met à jour silencieusement si le réseau répond.
+// Stratégie "réseau d'abord, cache en secours" : garantit d'avoir toujours la
+// dernière version quand une connexion est disponible, et bascule sur la copie
+// en cache uniquement hors-ligne. Évite de servir une version périmée après
+// une mise à jour de l'app.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
