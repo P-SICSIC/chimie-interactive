@@ -1,5 +1,53 @@
 <!DOCTYPE html>
-<html><head><meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="." />
+<html><head><script>
+(function() {
+  const STATS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyH4YmBCvc5sOrg_UJUfp9L7mgZtWHfB5cpKCkwGUfyHxkbhAbAqe1V3eFlBRHuBWvr/exec';
+  const PROGRAMME = 'simulation-gaz';
+
+  function getSessionId() {
+    let id = sessionStorage.getItem('chimie_session_id');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)));
+      sessionStorage.setItem('chimie_session_id', id);
+    }
+    return id;
+  }
+
+  window.sendStat = function(evenement, detail, resultat, essais) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || '',
+        essais: essais !== undefined ? essais : ''
+      });
+      fetch(STATS_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      }).catch(() => {});
+    } catch (e) { /* on ignore silencieusement toute erreur reseau */ }
+  };
+
+  window.sendStatBeacon = function(evenement, detail, resultat) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || ''
+      });
+      const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' });
+      navigator.sendBeacon(STATS_ENDPOINT, blob);
+    } catch (e) {}
+  };
+})();
+</script>
+<meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="." />
 <meta charset="UTF-8">
 <style>
 canvas {
@@ -515,5 +563,6 @@ avgSpeedSlider.addEventListener('input', (e) => {
 
 createParticles(100, 5);
 animate();
+sendStat('start', '', '', '');
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script></body></html>

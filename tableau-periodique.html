@@ -1,4 +1,52 @@
-<html><head><meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href=".">
+<html><head><script>
+(function() {
+  const STATS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyH4YmBCvc5sOrg_UJUfp9L7mgZtWHfB5cpKCkwGUfyHxkbhAbAqe1V3eFlBRHuBWvr/exec';
+  const PROGRAMME = 'tableau-periodique';
+
+  function getSessionId() {
+    let id = sessionStorage.getItem('chimie_session_id');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)));
+      sessionStorage.setItem('chimie_session_id', id);
+    }
+    return id;
+  }
+
+  window.sendStat = function(evenement, detail, resultat, essais) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || '',
+        essais: essais !== undefined ? essais : ''
+      });
+      fetch(STATS_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      }).catch(() => {});
+    } catch (e) { /* on ignore silencieusement toute erreur reseau */ }
+  };
+
+  window.sendStatBeacon = function(evenement, detail, resultat) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || ''
+      });
+      const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' });
+      navigator.sendBeacon(STATS_ENDPOINT, blob);
+    } catch (e) {}
+  };
+})();
+</script>
+<meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href=".">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
@@ -552,6 +600,10 @@ function resetProgress() {
   document.getElementById('modal').style.display = 'none';
   document.getElementById('summary-modal').classList.remove('show');
   document.getElementById('summary-modal').style.display = 'none';
+  if (typeof gameFinished !== 'undefined') {
+    gameFinished = false;
+    sendStat('start', isExtended ? 'etendu' : 'normal', '', '');
+  }
 }
 
 document.getElementById('toggleExtended').addEventListener('click', () => {
@@ -716,8 +768,11 @@ function checkAnswer() {
       retryAnswers++;
       document.getElementById('current-retry').textContent = retryAnswers;
     }
+    sendStat('reponse', correctAnswer, attempts === 1 ? 'premier_coup' : 'apres_essais', attempts);
 
     if (score + wrongAnswers === TOTAL_ELEMENTS) {
+      gameFinished = true;
+      sendStat('fin', `${score}/${TOTAL_ELEMENTS}`, isExtended ? 'etendu' : 'normal', '');
       triggerConfetti();
       setTimeout(() => {
         document.getElementById('perfect-score').textContent = perfectAnswers;
@@ -745,8 +800,11 @@ function checkAnswer() {
       elementDiv.onclick = null;
       document.getElementById('modal').style.display = 'none';
       document.getElementById('current-wrong').textContent = wrongAnswers;
+      sendStat('reponse', correctAnswer, 'echec', 3);
 
       if (score + wrongAnswers === TOTAL_ELEMENTS) {
+        gameFinished = true;
+        sendStat('fin', `${score}/${TOTAL_ELEMENTS}`, isExtended ? 'etendu' : 'normal', '');
         triggerConfetti();
         setTimeout(() => {
           document.getElementById('perfect-score').textContent = perfectAnswers;
@@ -821,6 +879,14 @@ document.getElementById('input-symbol').addEventListener('keyup', function(event
 });
 
 createPeriodicTable();
+
+let gameFinished = false;
+sendStat('start', isExtended ? 'etendu' : 'normal', '', '');
+window.addEventListener('pagehide', function() {
+  if (!gameFinished) {
+    sendStatBeacon('abandon', `${score + wrongAnswers}/${TOTAL_ELEMENTS}`, '');
+  }
+});
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script></body>
 </html>

@@ -1,4 +1,52 @@
-<html><head><meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="./"><style>
+<html><head><script>
+(function() {
+  const STATS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyH4YmBCvc5sOrg_UJUfp9L7mgZtWHfB5cpKCkwGUfyHxkbhAbAqe1V3eFlBRHuBWvr/exec';
+  const PROGRAMME = 'equilibre-redox';
+
+  function getSessionId() {
+    let id = sessionStorage.getItem('chimie_session_id');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)));
+      sessionStorage.setItem('chimie_session_id', id);
+    }
+    return id;
+  }
+
+  window.sendStat = function(evenement, detail, resultat, essais) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || '',
+        essais: essais !== undefined ? essais : ''
+      });
+      fetch(STATS_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      }).catch(() => {});
+    } catch (e) { /* on ignore silencieusement toute erreur reseau */ }
+  };
+
+  window.sendStatBeacon = function(evenement, detail, resultat) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || ''
+      });
+      const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' });
+      navigator.sendBeacon(STATS_ENDPOINT, blob);
+    } catch (e) {}
+  };
+})();
+</script>
+<meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="./"><style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap');
 
 body {
@@ -377,6 +425,7 @@ function checkAnswers() {
             } else {
                 retryCount++;
             }
+            sendStat('reponse', currentEquation.equation, attemptsUsed === 0 ? 'premier_coup' : 'apres_essais', attemptsUsed);
         }
         document.getElementById('next-button').style.display = 'inline-block';
     } else {
@@ -387,6 +436,7 @@ function checkAnswers() {
             if (questionResults[currentEquationIndex] === null) {
                 questionResults[currentEquationIndex] = false;
                 wrongCount++;
+                sendStat('reponse', currentEquation.equation, 'echec', 3);
             }
             document.getElementById('next-button').style.display = 'inline-block';
         } else {
@@ -422,6 +472,8 @@ function nextEquation() {
 }
 
 function showFinalRecap() {
+    gameFinished = true;
+    sendStat('fin', `${perfectCount + retryCount}/${equations.length}`, '', '');
     document.getElementById('message').textContent = "Félicitations ! Vous avez terminé toutes les équations !";
     document.getElementById('equation').innerHTML = '';
     document.getElementById('attempts').textContent = '';
@@ -455,6 +507,14 @@ function showFinalRecap() {
 // Initialize progress grid and stats
 updateProgressGrid();
 updateStats();
+
+let gameFinished = false;
+sendStat('start', `${equations.length} equations`, '', '');
+window.addEventListener('pagehide', function() {
+    if (!gameFinished) {
+        sendStatBeacon('abandon', `equation ${currentEquationIndex + 1}/${equations.length}`, '');
+    }
+});
 
 document.getElementById('validate-button').addEventListener('click', checkAnswers);
 document.getElementById('next-button').addEventListener('click', nextEquation);

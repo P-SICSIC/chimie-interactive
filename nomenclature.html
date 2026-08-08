@@ -1,4 +1,52 @@
-<html><head><meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="./">
+<html><head><script>
+(function() {
+  const STATS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyH4YmBCvc5sOrg_UJUfp9L7mgZtWHfB5cpKCkwGUfyHxkbhAbAqe1V3eFlBRHuBWvr/exec';
+  const PROGRAMME = 'nomenclature';
+
+  function getSessionId() {
+    let id = sessionStorage.getItem('chimie_session_id');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)));
+      sessionStorage.setItem('chimie_session_id', id);
+    }
+    return id;
+  }
+
+  window.sendStat = function(evenement, detail, resultat, essais) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || '',
+        essais: essais !== undefined ? essais : ''
+      });
+      fetch(STATS_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      }).catch(() => {});
+    } catch (e) { /* on ignore silencieusement toute erreur reseau */ }
+  };
+
+  window.sendStatBeacon = function(evenement, detail, resultat) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || ''
+      });
+      const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' });
+      navigator.sendBeacon(STATS_ENDPOINT, blob);
+    } catch (e) {}
+  };
+})();
+</script>
+<meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="/">
 <meta charset="UTF-8">
 <title>Quiz des Structures Chimiques</title>
 <style>
@@ -708,6 +756,7 @@ function checkAnswer() {
         document.getElementById('feedback').className = 'feedback correct';
         questionStatus[questionNumber - 1] = 'correct';
         attemptsPerQuestion[questionNumber - 1] = attempts;
+        sendStat('reponse', correctAnswer, attempts === 0 ? 'premier_coup' : 'apres_essais', attempts);
         if(!answeredQuestions[questionNumber - 1]) {
             score++;
             answeredQuestions[questionNumber - 1] = true;
@@ -722,6 +771,7 @@ function checkAnswer() {
             document.getElementById('feedback').innerHTML = `Incorrect. La bonne réponse était: ${correctAnswer}`;
             document.getElementById('feedback').className = 'feedback incorrect';
             questionStatus[questionNumber - 1] = 'incorrect';
+            sendStat('reponse', correctAnswer, 'echec', attempts);
             nextMolecule();
         } else {
             document.getElementById('feedback').innerHTML = `Incorrect. Il vous reste ${3-attempts} essai(s).`;
@@ -746,6 +796,8 @@ function nextMolecule() {
 }
 
 function finishGame() {
+    gameFinished = true;
+    sendStat('fin', `${score}/${TOTAL_QUESTIONS}`, '', '');
     const goodAnswers = questionStatus.filter(status => status === 'correct').length;
     const wrongAnswers = questionStatus.filter(status => status === 'incorrect').length;
 
@@ -799,6 +851,13 @@ document.getElementById('answer').addEventListener('keypress', function(e) {
 });
 
 shuffleQuestions();
+let gameFinished = false;
+sendStat('start', `${TOTAL_QUESTIONS} questions`, '', '');
+window.addEventListener('pagehide', function() {
+    if (!gameFinished) {
+        sendStatBeacon('abandon', `question ${questionNumber}/${TOTAL_QUESTIONS}`, '');
+    }
+});
 document.getElementById('totalQuestionsDisplay').textContent = TOTAL_QUESTIONS;
 displayMolecule();
 updateSummary();
