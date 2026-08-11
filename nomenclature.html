@@ -46,7 +46,7 @@
   };
 })();
 </script>
-<meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="." />
+<meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="/">
 <meta charset="UTF-8">
 <title>Quiz des Structures Chimiques</title>
 <style>
@@ -243,427 +243,427 @@ const molecules = [
             <text x="130" y="150" font-size="24">NO₃⁻</text>
         </svg>`,
         name: "nitrate",
-        alternates: ["no3-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">SO₄²⁻</text>
         </svg>`,
         name: "sulfate",
-        alternates: ["so42-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">NO₂⁻</text>
         </svg>`,
         name: "nitrite",
-        alternates: ["no2-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">Cl⁻</text>
         </svg>`,
         name: "chlorure",
-        alternates: ["cl-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">Br⁻</text>
         </svg>`,
         name: "bromure",
-        alternates: ["br-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">I⁻</text>
         </svg>`,
         name: "iodure",
-        alternates: ["i-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">CO₃²⁻</text>
         </svg>`,
         name: "carbonate",
-        alternates: ["co32-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">HCO₃⁻</text>
         </svg>`,
         name: "hydrogenocarbonate",
-        alternates: ["hco3-", "bicarbonate"]
+        alternates: ["bicarbonate"]
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">PO₄³⁻</text>
         </svg>`,
         name: "phosphate",
-        alternates: ["po43-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">S²⁻</text>
         </svg>`,
         name: "sulfure",
-        alternates: ["s2-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">OH⁻</text>
         </svg>`,
         name: "hydroxyde",
-        alternates: ["oh-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">NH₄⁺</text>
         </svg>`,
         name: "ammonium",
-        alternates: ["nh4+"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">H₃O⁺</text>
         </svg>`,
         name: "oxonium",
-        alternates: ["h3o+"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">CN⁻</text>
         </svg>`,
         name: "cyanure",
-        alternates: ["cn-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">H⁻</text>
         </svg>`,
         name: "hydrure",
-        alternates: ["h-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">S₂O₃²⁻</text>
         </svg>`,
         name: "thiosulfate",
-        alternates: ["s2o32-"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">NaCl</text>
         </svg>`,
         name: "chlorure de sodium",
-        alternates: ["nacl"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">KBr</text>
         </svg>`,
         name: "bromure de potassium",
-        alternates: ["kbr"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">CaCl₂</text>
         </svg>`,
         name: "chlorure de calcium",
-        alternates: ["cacl2"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">MgSO₄</text>
         </svg>`,
         name: "sulfate de magnésium",
-        alternates: ["mgs04"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">Na₂CO₃</text>
         </svg>`,
         name: "carbonate de sodium",
-        alternates: ["na2co3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">K₂SO₄</text>
         </svg>`,
         name: "sulfate de potassium",
-        alternates: ["k2so4"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">CaBr₂</text>
         </svg>`,
         name: "bromure de calcium",
-        alternates: ["cabr2"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">NaI</text>
         </svg>`,
         name: "iodure de sodium",
-        alternates: ["nai"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">KNO₃</text>
         </svg>`,
         name: "nitrate de potassium",
-        alternates: ["kno3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">NH₄Cl</text>
         </svg>`,
         name: "chlorure d'ammonium",
-        alternates: ["nh4cl"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">CuSO₄</text>
         </svg>`,
         name: "sulfate de cuivre(II)",
-        alternates: ["cus04", "sulfate de cuivre"]
+        alternates: ["sulfate de cuivre"]
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">AgNO₃</text>
         </svg>`,
         name: "nitrate d'argent",
-        alternates: ["agno3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">Fe₂(SO₄)₃</text>
         </svg>`,
         name: "sulfate de fer(III)",
-        alternates: ["fe2so43"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">ZnCl₂</text>
         </svg>`,
         name: "chlorure de zinc",
-        alternates: ["zncl2"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">BaCl₂</text>
         </svg>`,
         name: "chlorure de baryum",
-        alternates: ["bacl2"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">Li₂CO₃</text>
         </svg>`,
         name: "carbonate de lithium",
-        alternates: ["li2co3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">AlCl₃</text>
         </svg>`,
         name: "chlorure d'aluminium",
-        alternates: ["alcl3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">KMnO₄</text>
         </svg>`,
         name: "permanganate de potassium",
-        alternates: ["kmno4"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">Na₃PO₄</text>
         </svg>`,
         name: "phosphate de sodium",
-        alternates: ["na3po4"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">(NH₄)₂SO₄</text>
         </svg>`,
         name: "sulfate d'ammonium",
-        alternates: ["(nh4)2so4"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">HCl</text>
         </svg>`,
         name: "acide chlorhydrique",
-        alternates: ["hcl"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">HBr</text>
         </svg>`,
         name: "acide bromhydrique",
-        alternates: ["hbr"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">HI</text>
         </svg>`,
         name: "acide iodhydrique",
-        alternates: ["hi"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">HF</text>
         </svg>`,
         name: "acide fluorhydrique",
-        alternates: ["hf"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">H₂S</text>
         </svg>`,
         name: "acide sulfhydrique",
-        alternates: ["h2s", "sulfure d'hydrogene", "sulfure d'hydrogène"]
+        alternates: ["sulfure d'hydrogene", "sulfure d'hydrogène"]
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">HCN</text>
         </svg>`,
         name: "acide cyanhydrique",
-        alternates: ["hcn"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">HNO₃</text>
         </svg>`,
         name: "acide nitrique",
-        alternates: ["hno3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">HNO₂</text>
         </svg>`,
         name: "acide nitreux",
-        alternates: ["hno2"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">H₂SO₄</text>
         </svg>`,
         name: "acide sulfurique",
-        alternates: ["h2so4"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">H₂SO₃</text>
         </svg>`,
         name: "acide sulfureux",
-        alternates: ["h2so3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">H₃PO₄</text>
         </svg>`,
         name: "acide phosphorique",
-        alternates: ["h3po4"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">H₂CO₃</text>
         </svg>`,
         name: "acide carbonique",
-        alternates: ["h2co3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">CO</text>
         </svg>`,
         name: "monoxyde de carbone",
-        alternates: ["co"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">CO₂</text>
         </svg>`,
         name: "dioxyde de carbone",
-        alternates: ["co2"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">SO₂</text>
         </svg>`,
         name: "dioxyde de soufre",
-        alternates: ["so2"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">SO₃</text>
         </svg>`,
         name: "trioxyde de soufre",
-        alternates: ["so3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">NO</text>
         </svg>`,
         name: "monoxyde d'azote",
-        alternates: ["no"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">NO₂</text>
         </svg>`,
         name: "dioxyde d'azote",
-        alternates: ["no2"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">N₂O</text>
         </svg>`,
         name: "monoxyde de diazote",
-        alternates: ["n2o", "protoxyde d'azote"]
+        alternates: ["protoxyde d'azote"]
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">N₂O₅</text>
         </svg>`,
         name: "pentoxyde de diazote",
-        alternates: ["n2o5"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">PCl₃</text>
         </svg>`,
         name: "trichlorure de phosphore",
-        alternates: ["pcl3"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">PCl₅</text>
         </svg>`,
         name: "pentachlorure de phosphore",
-        alternates: ["pcl5"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">SF₆</text>
         </svg>`,
         name: "hexafluorure de soufre",
-        alternates: ["sf6"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">CCl₄</text>
         </svg>`,
         name: "tétrachlorure de carbone",
-        alternates: ["ccl4"]
+        alternates: []
     },
     {
         svg: `<svg width="300" height="300" viewBox="0 0 300 300">
             <text x="130" y="150" font-size="24">FeSO₄</text>
         </svg>`,
         name: "sulfate de fer(II)",
-        alternates: ["feso4"]
+        alternates: []
     }
 ];
 
