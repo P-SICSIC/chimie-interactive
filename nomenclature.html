@@ -712,21 +712,43 @@ function updateProgressSquares() {
 }
 
 function jumpToQuestion(index) {
-    if(index < questionNumber - 1) {
-        questionNumber = index + 1;
-        currentMolecule = index;
-        attempts = 0;
-        displayMolecule();
-        updateProgressSquares();
+    if (questionStatus[index] === 'correct') {
+        return; // déjà validée : pas de retour possible dessus
     }
+    // Les questions déjà échouées restent accessibles, mais displayMolecule()
+    // les affichera en lecture seule (voir plus bas) : consultation, pas de nouvelle tentative.
+    if (index === currentMolecule) {
+        return; // déjà la question affichée
+    }
+    questionNumber = index + 1;
+    currentMolecule = index;
+    attempts = 0;
+    displayMolecule();
 }
 
 function displayMolecule() {
     document.getElementById('moleculeDisplay').innerHTML = molecules[questionOrder[currentMolecule]].svg;
     document.getElementById('questionNumber').textContent = questionNumber;
     document.getElementById('score').textContent = score;
-    document.getElementById('answer').value = '';
-    document.getElementById('feedback').textContent = '';
+
+    const input = document.getElementById('answer');
+    const validateButton = document.querySelector('.input-zone button');
+    const status = questionStatus[currentMolecule];
+
+    if (status === 'incorrect') {
+        // Question déjà échouée : consultation seule, pas de nouvelle tentative possible
+        input.value = '';
+        input.disabled = true;
+        validateButton.disabled = true;
+        document.getElementById('feedback').innerHTML = `Question déjà échouée. La bonne réponse était : ${molecules[questionOrder[currentMolecule]].name}`;
+        document.getElementById('feedback').className = 'feedback incorrect';
+    } else {
+        input.disabled = false;
+        validateButton.disabled = false;
+        input.value = '';
+        document.getElementById('feedback').textContent = '';
+    }
+
     updateProgressSquares();
     updateSummary();
 }
@@ -747,6 +769,9 @@ function normalizeAnswer(str) {
 }
 
 function checkAnswer() {
+    if (questionStatus[currentMolecule] === 'correct' || questionStatus[currentMolecule] === 'incorrect') {
+        return; // question déjà résolue (consultation seule)
+    }
     const userAnswer = normalizeAnswer(document.getElementById('answer').value);
     const correctAnswer = molecules[questionOrder[currentMolecule]].name;
     const alternateAnswers = molecules[questionOrder[currentMolecule]].alternates;
@@ -783,14 +808,25 @@ function checkAnswer() {
     updateSummary();
 }
 
+function findNextUnanswered(fromIndex) {
+    for (let i = fromIndex + 1; i < TOTAL_QUESTIONS; i++) {
+        if (questionStatus[i] === 'pending') return i;
+    }
+    for (let i = 0; i < fromIndex; i++) {
+        if (questionStatus[i] === 'pending') return i;
+    }
+    return null; // tout a été résolu au moins une fois
+}
+
 function nextMolecule() {
     attempts = 0;
-    currentMolecule++;
-    questionNumber++;
-    
-    if (questionNumber > TOTAL_QUESTIONS) {
+    const next = findNextUnanswered(currentMolecule);
+
+    if (next === null) {
         finishGame();
     } else {
+        currentMolecule = next;
+        questionNumber = next + 1;
         displayMolecule();
     }
 }
