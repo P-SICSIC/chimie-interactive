@@ -46,7 +46,7 @@
   };
 })();
 </script>
-<meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png"><base href="/">
+<meta name="theme-color" content="#2d2a4a"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta charset="UTF-8">
 <title>Quiz des Structures Chimiques</title>
 <style>
@@ -173,14 +173,50 @@
         color: #f44336;
     }
     .missed-review {
-        margin-top: 15px;
+        margin-top: 25px;
         text-align: left;
-        max-width: 400px;
+        max-width: 700px;
         margin-left: auto;
         margin-right: auto;
     }
-    .missed-review ul {
-        columns: 2;
+    .review-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 12px;
+    }
+    .review-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+        background: #fafafa;
+    }
+    .review-card.missed {
+        border-color: #f44336;
+        background: #FFEBEE;
+    }
+    .review-card.shaky {
+        border-color: #ff9800;
+        background: #FFF3E0;
+    }
+    .review-card-number {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 4px;
+    }
+    .review-card-structure {
+        width: 90px;
+        height: 90px;
+        margin: 0 auto;
+    }
+    .review-card-structure svg {
+        width: 100%;
+        height: 100%;
+    }
+    .review-card-answer {
+        font-size: 14px;
+        font-weight: bold;
+        margin-top: 6px;
     }
 </style>
 
@@ -712,11 +748,9 @@ function updateProgressSquares() {
 }
 
 function jumpToQuestion(index) {
-    if (questionStatus[index] === 'correct') {
-        return; // déjà validée : pas de retour possible dessus
+    if (questionStatus[index] !== 'pending') {
+        return; // question déjà résolue (correcte ou échouée) : plus accessible
     }
-    // Les questions déjà échouées restent accessibles, mais displayMolecule()
-    // les affichera en lecture seule (voir plus bas) : consultation, pas de nouvelle tentative.
     if (index === currentMolecule) {
         return; // déjà la question affichée
     }
@@ -733,21 +767,10 @@ function displayMolecule() {
 
     const input = document.getElementById('answer');
     const validateButton = document.querySelector('.input-zone button');
-    const status = questionStatus[currentMolecule];
-
-    if (status === 'incorrect') {
-        // Question déjà échouée : consultation seule, pas de nouvelle tentative possible
-        input.value = '';
-        input.disabled = true;
-        validateButton.disabled = true;
-        document.getElementById('feedback').innerHTML = `Question déjà échouée. La bonne réponse était : ${molecules[questionOrder[currentMolecule]].name}`;
-        document.getElementById('feedback').className = 'feedback incorrect';
-    } else {
-        input.disabled = false;
-        validateButton.disabled = false;
-        input.value = '';
-        document.getElementById('feedback').textContent = '';
-    }
+    input.disabled = false;
+    validateButton.disabled = false;
+    input.value = '';
+    document.getElementById('feedback').textContent = '';
 
     updateProgressSquares();
     updateSummary();
@@ -831,37 +854,48 @@ function nextMolecule() {
     }
 }
 
+function buildReviewCard(index, labelClass) {
+    const molecule = molecules[questionOrder[index]];
+    return `
+        <div class="review-card ${labelClass}">
+            <div class="review-card-number">Question ${index + 1}</div>
+            <div class="review-card-structure">${molecule.svg}</div>
+            <div class="review-card-answer">${molecule.name}</div>
+        </div>
+    `;
+}
+
 function finishGame() {
     gameFinished = true;
     sendStat('fin', `${score}/${TOTAL_QUESTIONS}`, '', '');
     const goodAnswers = questionStatus.filter(status => status === 'correct').length;
     const wrongAnswers = questionStatus.filter(status => status === 'incorrect').length;
 
-    const missedNames = [];
-    const shakyNames = [];
+    const missedIndexes = [];
+    const shakyIndexes = [];
     for (let i = 0; i < questionOrder.length; i++) {
         if (questionStatus[i] === 'incorrect') {
-            missedNames.push(molecules[questionOrder[i]].name);
+            missedIndexes.push(i);
         } else if (questionStatus[i] === 'correct' && attemptsPerQuestion[i] > 0) {
-            shakyNames.push(molecules[questionOrder[i]].name);
+            shakyIndexes.push(i);
         }
     }
 
-    const missedListHtml = missedNames.length > 0
+    const missedListHtml = missedIndexes.length > 0
         ? `<div class="missed-review">
              <h3>À revoir (erreur non corrigée) :</h3>
-             <ul>${missedNames.map(name => `<li>${name}</li>`).join('')}</ul>
+             <div class="review-grid">${missedIndexes.map(i => buildReviewCard(i, 'missed')).join('')}</div>
            </div>`
         : '';
 
-    const shakyListHtml = shakyNames.length > 0
+    const shakyListHtml = shakyIndexes.length > 0
         ? `<div class="missed-review">
              <h3>Réussies après une ou deux erreurs :</h3>
-             <ul>${shakyNames.map(name => `<li>${name}</li>`).join('')}</ul>
+             <div class="review-grid">${shakyIndexes.map(i => buildReviewCard(i, 'shaky')).join('')}</div>
            </div>`
         : '';
 
-    const noIssuesHtml = (missedNames.length === 0 && shakyNames.length === 0)
+    const noIssuesHtml = (missedIndexes.length === 0 && shakyIndexes.length === 0)
         ? '<p>Aucune erreur, bravo !</p>'
         : '';
 
