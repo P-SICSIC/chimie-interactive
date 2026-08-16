@@ -5,6 +5,7 @@ const APP_SHELL = [
   'simulation-gaz.html',
   'nomenclature.html',
   'equilibre-redox.html',
+  'configuration-electronique.html',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png'

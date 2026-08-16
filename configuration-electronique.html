@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2d2a4a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Configuration électronique</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", ui-sans-serif, sans-serif;
+    background: #f4f6fa;
+    color: #1c1f2e;
+    padding-bottom: 60px;
+  }
+
+  #app-home-button {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 9999;
+    background: #2d2a4a;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  #app-home-button:hover { background: #423d6e; }
+
+  header {
+    background: linear-gradient(160deg, #2d2a4a 0%, #215a82 100%);
+    color: white;
+    padding: 50px 20px 30px 20px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 6px 0; font-size: 26px; }
+  header p { margin: 0; opacity: 0.85; font-size: 14px; }
+
+  main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* --- Écran de sélection du mode --- */
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .mode-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 14px rgba(28,31,46,0.08);
+    cursor: pointer;
+    border: 2px solid transparent;
+    text-align: center;
+  }
+  .mode-card:hover { border-color: #215a82; transform: translateY(-2px); }
+  .mode-card h3 { margin: 0 0 8px 0; }
+  .mode-card p { font-size: 13px; color: #555; line-height: 1.5; margin: 0; }
+  .mode-card .badge {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: #eef1f8;
+    color: #2d2a4a;
+  }
+
+  /* --- Écran de quiz --- */
+  #quiz-screen { display: none; }
+
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .mode-pill {
+    background: #eef1f8;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #2d2a4a;
+  }
+
+  .element-card {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 4px 14px rgba(28,31,46,0.08);
+    margin-bottom: 20px;
+  }
+  .element-card .symbol { font-size: 40px; font-weight: 800; color: #215a82; }
+  .element-card .details { font-size: 14px; color: #555; margin-top: 4px; }
+
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .panel {
+    background: white;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 2px 8px rgba(28,31,46,0.06);
+  }
+  .panel h4 { margin: 0 0 10px 0; font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
+  .btn-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .orbital-btn, .count-btn {
+    border: 1px solid #ccc;
+    background: #fafafa;
+    border-radius: 6px;
+    padding: 5px 6px;
+    font-size: 12px;
+    cursor: pointer;
+    min-width: 28px;
+    text-align: center;
+  }
+  .orbital-btn.selected { background: #215a82; color: white; border-color: #215a82; }
+  .orbital-btn.used { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
+  .count-btn:hover, .orbital-btn:not(.used):not(.invalid):hover { background: #e4ecf5; }
+
+  .orbital-grid {
+    display: grid;
+    grid-template-columns: 26px repeat(4, 1fr);
+    gap: 4px;
+    max-width: 220px;
+  }
+  .orbital-grid .col-header {
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+    font-weight: bold;
+  }
+  .orbital-grid .row-header {
+    font-size: 11px;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .orbital-grid .orbital-btn {
+    width: 100%;
+    min-width: 0;
+    padding: 5px 2px;
+  }
+  .orbital-grid .orbital-btn.invalid {
+    cursor: default;
+    color: #ccc;
+    background: #f5f5f5;
+    border-color: #eee;
+  }
+
+  #countButtons {
+    max-width: 220px;
+  }
+  #countButtons .count-btn {
+    min-width: 26px;
+    padding: 5px 4px;
+  }
+
+  .draft-zone {
+    background: white;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(28,31,46,0.06);
+    margin-bottom: 16px;
+    min-height: 50px;
+  }
+  .draft-zone h4 { margin: 0 0 10px 0; font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
+  .draft-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #eef1f8;
+    border-radius: 8px;
+    padding: 5px 10px;
+    margin: 3px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .draft-chip .remove {
+    cursor: pointer;
+    color: #f44336;
+    font-weight: bold;
+  }
+  .draft-empty { color: #999; font-size: 13px; }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  button.primary {
+    background: #215a82;
+    color: white;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button.primary:hover { background: #184a6b; }
+  button.secondary {
+    background: white;
+    color: #555;
+    border: 1px solid #ccc;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  #feedback { min-height: 24px; font-size: 14px; margin-bottom: 6px; }
+  #feedback.correct { color: #4CAF50; font-weight: bold; }
+  #feedback.incorrect { color: #f44336; font-weight: bold; }
+  #feedback ul { margin: 4px 0 0 0; padding-left: 20px; font-weight: normal; }
+  .exception-warning {
+    background: #FFF3E0;
+    color: #c4791f;
+    border: 1px solid #ffcc80;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+
+  .progress-squares {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 20px 0;
+  }
+  .p-square {
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    background: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .p-square.correct { background: #4CAF50; color: white; }
+  .p-square.incorrect { background: #f44336; color: white; }
+  .p-square.locked { cursor: not-allowed; }
+
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .stats-row span {
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: #eef1f8;
+  }
+
+  /* --- Récapitulatif final --- */
+  .review-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .review-card {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fafafa;
+  }
+  .review-card.missed { border-color: #f44336; background: #FFEBEE; }
+  .review-card.shaky { border-color: #ff9800; background: #FFF3E0; }
+  .review-card .rc-num { font-size: 12px; color: #666; }
+  .review-card .rc-elem { font-size: 18px; font-weight: 800; color: #215a82; margin: 4px 0; }
+  .review-card .rc-config { font-size: 13px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<a id="app-home-button" href="index.html">← Accueil</a>
+
+<header>
+  <h1>Configuration électronique</h1>
+  <p>10 éléments, une configuration à construire à chaque fois — atomes, exceptions, et ions.</p>
+</header>
+
+<main>
+
+  <!-- Écran de sélection du mode -->
+  <div id="mode-select">
+    <div class="mode-grid">
+      <div class="mode-card" onclick="startGame('facile')">
+        <h3>🟢 Facile</h3>
+        <p>3 essais par question. En cas d'erreur, le programme détaille précisément ce qui ne va pas.</p>
+        <span class="badge">3 essais + indices</span>
+      </div>
+      <div class="mode-card" onclick="startGame('normal')">
+        <h3>🟡 Normal</h3>
+        <p>2 essais par question. Retour simple : correct ou incorrect, sans détail.</p>
+        <span class="badge">2 essais</span>
+      </div>
+      <div class="mode-card" onclick="startGame('expert')">
+        <h3>🔴 Expert</h3>
+        <p>1 seul essai par question. Aucune aide.</p>
+        <span class="badge">1 essai</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Écran de quiz -->
+  <div id="quiz-screen">
+    <div class="top-bar">
+      <div>Question <span id="questionNumber">1</span>/10 — Score: <span id="score">0</span></div>
+      <div class="mode-pill" id="modePill"></div>
+    </div>
+
+    <div class="element-card">
+      <div class="symbol" id="elementSymbol"></div>
+      <div class="details" id="elementDetails"></div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <h4>Orbitales</h4>
+        <div class="btn-grid" id="orbitalButtons"></div>
+      </div>
+      <div class="panel">
+        <h4>Nombre d'électrons</h4>
+        <div class="btn-grid" id="countButtons"></div>
+      </div>
+    </div>
+
+    <div class="draft-zone">
+      <h4>Votre configuration</h4>
+      <div id="draftDisplay"><span class="draft-empty">Cliquez une orbitale puis un nombre d'électrons pour commencer.</span></div>
+    </div>
+
+    <div id="exceptionWarning" class="exception-warning" style="display:none;">⚠️ Attention, cet élément fait partie des exceptions à la règle de Klechkowski.</div>
+    <div id="feedback"></div>
+
+    <div class="action-row">
+      <button class="primary" onclick="checkAnswer()">Vérifier</button>
+      <button class="secondary" onclick="clearDraft()">Réinitialiser</button>
+      <span id="attemptsLeft" style="font-size:13px;color:#666;"></span>
+    </div>
+
+    <div class="progress-squares" id="progressSquares"></div>
+
+    <div class="stats-row">
+      <span>Premier coup: <span id="statPerfect">0</span></span>
+      <span>Après essais: <span id="statRetry">0</span></span>
+      <span>Échecs: <span id="statWrong">0</span></span>
+    </div>
+  </div>
+
+  <!-- Écran récapitulatif -->
+  <div id="recap-screen" style="display:none;"></div>
+
+</main>
+
+<script>
+(function() {
+  const STATS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyH4YmBCvc5sOrg_UJUfp9L7mgZtWHfB5cpKCkwGUfyHxkbhAbAqe1V3eFlBRHuBWvr/exec';
+  const PROGRAMME = 'configuration-electronique';
+
+  function getSessionId() {
+    let id = sessionStorage.getItem('chimie_session_id');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)));
+      sessionStorage.setItem('chimie_session_id', id);
+    }
+    return id;
+  }
+
+  window.sendStat = function(evenement, detail, resultat, essais) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || '',
+        essais: essais !== undefined ? essais : ''
+      });
+      fetch(STATS_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
+  window.sendStatBeacon = function(evenement, detail, resultat) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || ''
+      });
+      const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' });
+      navigator.sendBeacon(STATS_ENDPOINT, blob);
+    } catch (e) {}
+  };
+})();
+</script>
+
+<script>
+// ============================================================
+// Données chimiques
+// ============================================================
+
+const elements = {
+  "1": {symbol: "H", name: "Hydrogène"}, "2": {symbol: "He", name: "Hélium"},
+  "3": {symbol: "Li", name: "Lithium"}, "4": {symbol: "Be", name: "Béryllium"},
+  "5": {symbol: "B", name: "Bore"}, "6": {symbol: "C", name: "Carbone"},
+  "7": {symbol: "N", name: "Azote"}, "8": {symbol: "O", name: "Oxygène"},
+  "9": {symbol: "F", name: "Fluor"}, "10": {symbol: "Ne", name: "Néon"},
+  "11": {symbol: "Na", name: "Sodium"}, "12": {symbol: "Mg", name: "Magnésium"},
+  "13": {symbol: "Al", name: "Aluminium"}, "14": {symbol: "Si", name: "Silicium"},
+  "15": {symbol: "P", name: "Phosphore"}, "16": {symbol: "S", name: "Soufre"},
+  "17": {symbol: "Cl", name: "Chlore"}, "18": {symbol: "Ar", name: "Argon"},
+  "19": {symbol: "K", name: "Potassium"}, "20": {symbol: "Ca", name: "Calcium"},
+  "21": {symbol: "Sc", name: "Scandium"}, "22": {symbol: "Ti", name: "Titane"},
+  "23": {symbol: "V", name: "Vanadium"}, "24": {symbol: "Cr", name: "Chrome"},
+  "25": {symbol: "Mn", name: "Manganèse"}, "26": {symbol: "Fe", name: "Fer"},
+  "27": {symbol: "Co", name: "Cobalt"}, "28": {symbol: "Ni", name: "Nickel"},
+  "29": {symbol: "Cu", name: "Cuivre"}, "30": {symbol: "Zn", name: "Zinc"},
+  "31": {symbol: "Ga", name: "Gallium"}, "32": {symbol: "Ge", name: "Germanium"},
+  "33": {symbol: "As", name: "Arsenic"}, "34": {symbol: "Se", name: "Sélénium"},
+  "35": {symbol: "Br", name: "Brome"}, "36": {symbol: "Kr", name: "Krypton"},
+  "37": {symbol: "Rb", name: "Rubidium"}, "38": {symbol: "Sr", name: "Strontium"},
+  "39": {symbol: "Y", name: "Yttrium"}, "40": {symbol: "Zr", name: "Zirconium"},
+  "41": {symbol: "Nb", name: "Niobium"}, "42": {symbol: "Mo", name: "Molybdène"},
+  "43": {symbol: "Tc", name: "Technétium"}, "44": {symbol: "Ru", name: "Ruthénium"},
+  "45": {symbol: "Rh", name: "Rhodium"}, "46": {symbol: "Pd", name: "Palladium"},
+  "47": {symbol: "Ag", name: "Argent"}, "48": {symbol: "Cd", name: "Cadmium"},
+  "49": {symbol: "In", name: "Indium"}, "50": {symbol: "Sn", name: "Étain"},
+  "51": {symbol: "Sb", name: "Antimoine"}, "52": {symbol: "Te", name: "Tellure"},
+  "53": {symbol: "I", name: "Iode"}, "54": {symbol: "Xe", name: "Xénon"},
+  "55": {symbol: "Cs", name: "Césium"}, "56": {symbol: "Ba", name: "Baryum"},
+  "57": {symbol: "La", name: "Lanthane"}, "58": {symbol: "Ce", name: "Cérium"},
+  "59": {symbol: "Pr", name: "Praséodyme"}, "60": {symbol: "Nd", name: "Néodyme"},
+  "61": {symbol: "Pm", name: "Prométhium"}, "62": {symbol: "Sm", name: "Samarium"},
+  "63": {symbol: "Eu", name: "Europium"}, "64": {symbol: "Gd", name: "Gadolinium"},
+  "65": {symbol: "Tb", name: "Terbium"}, "66": {symbol: "Dy", name: "Dysprosium"},
+  "67": {symbol: "Ho", name: "Holmium"}, "68": {symbol: "Er", name: "Erbium"},
+  "69": {symbol: "Tm", name: "Thulium"}, "70": {symbol: "Yb", name: "Ytterbium"},
+  "71": {symbol: "Lu", name: "Lutécium"}, "72": {symbol: "Hf", name: "Hafnium"},
+  "73": {symbol: "Ta", name: "Tantale"}, "74": {symbol: "W", name: "Tungstène"},
+  "75": {symbol: "Re", name: "Rhénium"}, "76": {symbol: "Os", name: "Osmium"},
+  "77": {symbol: "Ir", name: "Iridium"}, "78": {symbol: "Pt", name: "Platine"},
+  "79": {symbol: "Au", name: "Or"}, "80": {symbol: "Hg", name: "Mercure"},
+  "81": {symbol: "Tl", name: "Thallium"}, "82": {symbol: "Pb", name: "Plomb"},
+  "83": {symbol: "Bi", name: "Bismuth"}, "84": {symbol: "Po", name: "Polonium"},
+  "85": {symbol: "At", name: "Astate"}, "86": {symbol: "Rn", name: "Radon"}
+};
+
+// Ordre de remplissage standard (règle de Klechkowski) jusqu'à Z=86
+const ORBITAL_ORDER = ['1s','2s','2p','3s','3p','4s','3d','4p','5s','4d','5p','6s','4f','5d','6p'];
+const CAPACITY = { s: 2, p: 6, d: 10, f: 14 };
+
+function capacityOf(orbital) {
+  return CAPACITY[orbital[orbital.length - 1]];
+}
+
+// Génère la configuration "normale" (Aufbau) pour n électrons
+function generateBaseConfig(n) {
+  const pairs = {};
+  let remaining = n;
+  for (const orb of ORBITAL_ORDER) {
+    if (remaining <= 0) break;
+    const cap = capacityOf(orb);
+    const fill = Math.min(cap, remaining);
+    pairs[orb] = fill;
+    remaining -= fill;
+  }
+  return pairs;
+}
+
+// Éléments dont la configuration réelle s'écarte de la règle générale (Z <= 86) : exclus du tirage "normal"
+const EXCEPTION_ZS = [24, 29, 41, 42, 44, 45, 46, 47, 78, 79, 57, 58, 64];
+
+// Les 5 exceptions "vedettes" utilisées pour la question 6, avec leur vraie configuration
+const FEATURED_EXCEPTIONS = [
+  { z: 24, pairs: { '1s':2,'2s':2,'2p':6,'3s':2,'3p':6,'4s':1,'3d':5 } },   // Chrome
+  { z: 29, pairs: { '1s':2,'2s':2,'2p':6,'3s':2,'3p':6,'4s':1,'3d':10 } }, // Cuivre
+  { z: 42, pairs: { '1s':2,'2s':2,'2p':6,'3s':2,'3p':6,'4s':2,'3d':10,'4p':6,'5s':1,'4d':5 } }, // Molybdène
+  { z: 47, pairs: { '1s':2,'2s':2,'2p':6,'3s':2,'3p':6,'4s':2,'3d':10,'4p':6,'5s':1,'4d':10 } }, // Argent
+  { z: 79, pairs: { '1s':2,'2s':2,'2p':6,'3s':2,'3p':6,'4s':2,'3d':10,'4p':6,'5s':2,'4d':10,'5p':6,'6s':1,'4f':14,'5d':10 } } // Or
+];
+
+const NE = { '1s':2,'2s':2,'2p':6 };
+const AR = { '1s':2,'2s':2,'2p':6,'3s':2,'3p':6 };
+const KR = { '1s':2,'2s':2,'2p':6,'3s':2,'3p':6,'4s':2,'3d':10,'4p':6 };
+const XE = { '1s':2,'2s':2,'2p':6,'3s':2,'3p':6,'4s':2,'3d':10,'4p':6,'5s':2,'4d':10,'5p':6 };
+const HE = { '1s':2 };
+
+const IONS = [
+  { z: 3, charge: '⁺', pairs: HE },
+  { z: 11, charge: '⁺', pairs: NE },
+  { z: 19, charge: '⁺', pairs: AR },
+  { z: 37, charge: '⁺', pairs: KR },
+  { z: 55, charge: '⁺', pairs: XE },
+  { z: 4, charge: '²⁺', pairs: HE },
+  { z: 12, charge: '²⁺', pairs: NE },
+  { z: 20, charge: '²⁺', pairs: AR },
+  { z: 38, charge: '²⁺', pairs: KR },
+  { z: 56, charge: '²⁺', pairs: XE },
+  { z: 9, charge: '⁻', pairs: NE },
+  { z: 17, charge: '⁻', pairs: AR },
+  { z: 35, charge: '⁻', pairs: KR },
+  { z: 53, charge: '⁻', pairs: XE },
+  { z: 26, charge: '²⁺', pairs: { ...AR, '3d':6 } },
+  { z: 26, charge: '³⁺', pairs: { ...AR, '3d':5 } },
+  { z: 29, charge: '²⁺', pairs: { ...AR, '3d':9 } },
+  { z: 30, charge: '²⁺', pairs: { ...AR, '3d':10 } },
+  { z: 25, charge: '²⁺', pairs: { ...AR, '3d':5 } },
+  { z: 24, charge: '³⁺', pairs: { ...AR, '3d':3 } },
+  { z: 47, charge: '⁺', pairs: { ...KR, '4d':10 } },
+  { z: 27, charge: '²⁺', pairs: { ...AR, '3d':7 } },
+  { z: 28, charge: '²⁺', pairs: { ...AR, '3d':8 } }
+];
+
+// ============================================================
+// État du jeu
+// ============================================================
+
+let mode = 'normal';
+let attemptsAllowed = 2;
+let hintsEnabled = false;
+
+let questions = [];       // 10 entrées {type, z, label, pairs, isException}
+let questionStatus = [];  // 'pending' | 'correct' | 'incorrect'
+let attemptsPerQuestion = [];
+let userFinalAnswers = []; // dernier brouillon soumis, pour les questions échouées
+let currentIndex = 0;
+let attemptsLeftForQuestion = 2;
+let draft = {};
+let selectedOrbital = null;
+
+let score = 0;
+let perfectCount = 0;
+let retryCount = 0;
+let wrongCount = 0;
+let gameFinished = false;
+
+function pickRandom(arr, count, excludeFn) {
+  const pool = arr.filter((v, i) => !excludeFn || !excludeFn(v, i));
+  const picked = [];
+  const copy = [...pool];
+  while (picked.length < count && copy.length > 0) {
+    const idx = Math.floor(Math.random() * copy.length);
+    picked.push(copy[idx]);
+    copy.splice(idx, 1);
+  }
+  return picked;
+}
+
+function formatAtomLabel(z) {
+  const el = elements[z];
+  return { big: el.symbol, details: `${el.name} — Z = ${z}` };
+}
+
+function formatIonLabel(z, charge) {
+  const el = elements[z];
+  return { big: `${el.symbol}${charge}`, details: `${el.name} (${el.symbol}${charge}) — Z(${el.symbol}) = ${z}` };
+}
+
+function buildQuestionSet() {
+  const normalZs = [];
+  for (let z = 1; z <= 86; z++) {
+    if (!EXCEPTION_ZS.includes(z)) normalZs.push(z);
+  }
+  const chosenNormal = pickRandom(normalZs, 5);
+  const chosenException = pickRandom(FEATURED_EXCEPTIONS, 1)[0];
+  const chosenIons = pickRandom(IONS, 4);
+
+  const qs = [];
+  chosenNormal.forEach(z => {
+    qs.push({ type: 'atom', z, label: formatAtomLabel(z), pairs: generateBaseConfig(z), isException: false });
+  });
+  qs.push({ type: 'atom', z: chosenException.z, label: formatAtomLabel(chosenException.z), pairs: chosenException.pairs, isException: true });
+  chosenIons.forEach(ion => {
+    qs.push({ type: 'ion', z: ion.z, label: formatIonLabel(ion.z, ion.charge), pairs: ion.pairs, isException: false });
+  });
+
+  return qs;
+}
+
+// ============================================================
+// Démarrage / sélection du mode
+// ============================================================
+
+function startGame(chosenMode) {
+  mode = chosenMode;
+  if (mode === 'facile') { attemptsAllowed = 3; hintsEnabled = true; }
+  else if (mode === 'normal') { attemptsAllowed = 2; hintsEnabled = false; }
+  else { attemptsAllowed = 1; hintsEnabled = false; }
+
+  questions = buildQuestionSet();
+  questionStatus = Array(10).fill('pending');
+  attemptsPerQuestion = Array(10).fill(0);
+  userFinalAnswers = Array(10).fill(null);
+  currentIndex = 0;
+  score = 0; perfectCount = 0; retryCount = 0; wrongCount = 0;
+  gameFinished = false;
+
+  document.getElementById('mode-select').style.display = 'none';
+  document.getElementById('recap-screen').style.display = 'none';
+  document.getElementById('quiz-screen').style.display = 'block';
+
+  const pillLabels = { facile: '🟢 Facile', normal: '🟡 Normal', expert: '🔴 Expert' };
+  document.getElementById('modePill').textContent = pillLabels[mode];
+
+  renderOrbitalButtons();
+  renderCountButtons();
+  loadQuestion(0);
+  sendStat('start', mode, '', '');
+
+  window.addEventListener('pagehide', function() {
+    if (!gameFinished) {
+      sendStatBeacon('abandon', `question ${currentIndex + 1}/10 (${mode})`, '');
+    }
+  });
+}
+
+// ============================================================
+// Rendu des panneaux
+// ============================================================
+
+function renderOrbitalButtons() {
+  const container = document.getElementById('orbitalButtons');
+  container.className = 'orbital-grid';
+  container.innerHTML = '';
+
+  const subshells = ['s', 'p', 'd', 'f'];
+
+  // Ligne d'en-têtes
+  container.appendChild(document.createElement('div')); // coin vide
+  subshells.forEach(sub => {
+    const h = document.createElement('div');
+    h.className = 'col-header';
+    h.textContent = sub;
+    container.appendChild(h);
+  });
+
+  // Lignes n = 1 à 6
+  for (let n = 1; n <= 6; n++) {
+    const rowLabel = document.createElement('div');
+    rowLabel.className = 'row-header';
+    rowLabel.textContent = 'n=' + n;
+    container.appendChild(rowLabel);
+
+    subshells.forEach((sub, lIndex) => {
+      const orb = n + sub;
+      const btn = document.createElement('div');
+      btn.className = 'orbital-btn';
+      btn.textContent = orb;
+      btn.dataset.orbital = orb;
+      btn.onclick = () => selectOrbital(orb, btn);
+      container.appendChild(btn);
+    });
+  }
+}
+
+function renderCountButtons() {
+  const container = document.getElementById('countButtons');
+  container.innerHTML = '';
+  for (let i = 1; i <= 14; i++) {
+    const btn = document.createElement('div');
+    btn.className = 'count-btn';
+    btn.textContent = i;
+    btn.onclick = () => selectCount(i);
+    container.appendChild(btn);
+  }
+}
+
+function selectOrbital(orb, btnEl) {
+  if (draft.hasOwnProperty(orb)) return; // déjà utilisée
+  document.querySelectorAll('.orbital-btn').forEach(b => b.classList.remove('selected'));
+  if (selectedOrbital === orb) {
+    selectedOrbital = null;
+  } else {
+    selectedOrbital = orb;
+    btnEl.classList.add('selected');
+  }
+}
+
+function selectCount(n) {
+  if (!selectedOrbital) return;
+  draft[selectedOrbital] = n;
+  selectedOrbital = null;
+  renderDraft();
+  refreshOrbitalAvailability();
+}
+
+function refreshOrbitalAvailability() {
+  document.querySelectorAll('.orbital-btn').forEach(b => {
+    b.classList.remove('selected');
+    if (draft.hasOwnProperty(b.dataset.orbital)) {
+      b.classList.add('used');
+    } else {
+      b.classList.remove('used');
+    }
+  });
+}
+
+function renderDraft() {
+  const container = document.getElementById('draftDisplay');
+  const keys = ORBITAL_ORDER.filter(o => draft.hasOwnProperty(o));
+  if (keys.length === 0) {
+    container.innerHTML = '<span class="draft-empty">Cliquez une orbitale puis un nombre d\'électrons pour commencer.</span>';
+    return;
+  }
+  container.innerHTML = keys.map(orb => `
+    <span class="draft-chip">${orb}<sup>${draft[orb]}</sup> <span class="remove" onclick="removeDraftPair('${orb}')">×</span></span>
+  `).join('');
+}
+
+function removeDraftPair(orb) {
+  delete draft[orb];
+  renderDraft();
+  refreshOrbitalAvailability();
+}
+
+function clearDraft() {
+  draft = {};
+  selectedOrbital = null;
+  renderDraft();
+  refreshOrbitalAvailability();
+}
+
+// ============================================================
+// Déroulé d'une question
+// ============================================================
+
+function loadQuestion(index) {
+  currentIndex = index;
+  const q = questions[index];
+  attemptsLeftForQuestion = attemptsAllowed;
+  clearDraft();
+
+  document.getElementById('questionNumber').textContent = index + 1;
+  document.getElementById('score').textContent = score;
+  document.getElementById('elementSymbol').textContent = q.label.big;
+  document.getElementById('elementDetails').textContent = q.label.details;
+  document.getElementById('attemptsLeft').textContent = `Essais restants : ${attemptsLeftForQuestion}`;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = '';
+  document.getElementById('exceptionWarning').style.display = 'none';
+
+  renderProgressSquares();
+  updateStatsDisplay();
+}
+
+function configsEqual(a, b) {
+  const ak = Object.keys(a).filter(k => a[k] > 0);
+  const bk = Object.keys(b).filter(k => b[k] > 0);
+  if (ak.length !== bk.length) return false;
+  return ak.every(k => a[k] === b[k]);
+}
+
+function buildHints(userPairs, correctPairs) {
+  const messages = [];
+  const userKeys = Object.keys(userPairs);
+  const correctKeys = Object.keys(correctPairs);
+
+  const missing = correctKeys.filter(k => !userKeys.includes(k));
+  const extra = userKeys.filter(k => !correctKeys.includes(k));
+  const wrongCountKeys = userKeys.filter(k => correctKeys.includes(k) && userPairs[k] !== correctPairs[k]);
+
+  if (missing.length > 0) messages.push(`Il manque au moins une orbitale (${missing.length} manquante${missing.length > 1 ? 's' : ''}).`);
+  if (extra.length > 0) messages.push(`Une orbitale ne devrait pas être présente (${extra.length} en trop).`);
+  if (wrongCountKeys.length > 0) messages.push(`Le nombre d'électrons est incorrect sur au moins une orbitale (${wrongCountKeys.length} concernée${wrongCountKeys.length > 1 ? 's' : ''}).`);
+
+  const userTotal = Object.values(userPairs).reduce((a, b) => a + b, 0);
+  const correctTotal = Object.values(correctPairs).reduce((a, b) => a + b, 0);
+  if (userTotal !== correctTotal) messages.push(`Le nombre total d'électrons ne correspond pas (vous avez ${userTotal}, attendu ${correctTotal}).`);
+
+  return messages;
+}
+
+function checkAnswer() {
+  if (questionStatus[currentIndex] !== 'pending') return;
+
+  const q = questions[currentIndex];
+  const isCorrect = configsEqual(draft, q.pairs);
+  const feedbackEl = document.getElementById('feedback');
+
+  if (isCorrect) {
+    questionStatus[currentIndex] = 'correct';
+    const usedAttempts = attemptsAllowed - attemptsLeftForQuestion;
+    attemptsPerQuestion[currentIndex] = usedAttempts;
+    score++;
+    if (usedAttempts === 0) { perfectCount++; } else { retryCount++; }
+
+    feedbackEl.textContent = 'Correct !';
+    feedbackEl.className = 'correct';
+    sendStat('reponse', q.label.details, usedAttempts === 0 ? 'premier_coup' : 'apres_essais', usedAttempts);
+    updateStatsDisplay();
+    renderProgressSquares();
+
+    setTimeout(advance, 700);
+  } else {
+    attemptsLeftForQuestion--;
+
+    if (q.isException) {
+      document.getElementById('exceptionWarning').style.display = 'block';
+    }
+
+    if (attemptsLeftForQuestion <= 0) {
+      questionStatus[currentIndex] = 'incorrect';
+      userFinalAnswers[currentIndex] = { ...draft };
+      wrongCount++;
+      feedbackEl.innerHTML = `Incorrect. La bonne configuration était : <strong>${formatConfig(q.pairs)}</strong>`;
+      feedbackEl.className = 'incorrect';
+      sendStat('reponse', q.label.details, 'echec', attemptsAllowed);
+      updateStatsDisplay();
+      renderProgressSquares();
+      setTimeout(advance, 1500);
+    } else {
+      let html = `Incorrect. Essais restants : ${attemptsLeftForQuestion}`;
+      if (hintsEnabled) {
+        const hints = buildHints(draft, q.pairs);
+        if (hints.length > 0) {
+          html += '<ul>' + hints.map(h => `<li>${h}</li>`).join('') + '</ul>';
+        }
+      }
+      feedbackEl.innerHTML = html;
+      feedbackEl.className = 'incorrect';
+      document.getElementById('attemptsLeft').textContent = `Essais restants : ${attemptsLeftForQuestion}`;
+    }
+  }
+}
+
+function formatConfig(pairs) {
+  return ORBITAL_ORDER.filter(o => pairs[o] > 0).map(o => `${o}${toSuperscript(pairs[o])}`).join(' ');
+}
+
+function toSuperscript(n) {
+  const map = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+  return String(n).split('').map(d => map[d]).join('');
+}
+
+function findNextPending(fromIndex) {
+  for (let i = fromIndex + 1; i < 10; i++) {
+    if (questionStatus[i] === 'pending') return i;
+  }
+  for (let i = 0; i < fromIndex; i++) {
+    if (questionStatus[i] === 'pending') return i;
+  }
+  return null;
+}
+
+function advance() {
+  const next = findNextPending(currentIndex);
+  if (next === null) {
+    finishGame();
+  } else {
+    loadQuestion(next);
+  }
+}
+
+// ============================================================
+// Grille de progression
+// ============================================================
+
+function renderProgressSquares() {
+  const container = document.getElementById('progressSquares');
+  container.innerHTML = '';
+  questions.forEach((q, i) => {
+    const sq = document.createElement('div');
+    sq.className = 'p-square';
+    sq.textContent = i + 1;
+    const status = questionStatus[i];
+    if (status === 'correct') sq.classList.add('correct');
+    else if (status === 'incorrect') sq.classList.add('incorrect');
+
+    if (status === 'pending') {
+      sq.onclick = () => { if (i !== currentIndex) loadQuestion(i); };
+    } else {
+      sq.classList.add('locked');
+    }
+    container.appendChild(sq);
+  });
+}
+
+function updateStatsDisplay() {
+  document.getElementById('statPerfect').textContent = perfectCount;
+  document.getElementById('statRetry').textContent = retryCount;
+  document.getElementById('statWrong').textContent = wrongCount;
+}
+
+// ============================================================
+// Récapitulatif final
+// ============================================================
+
+function finishGame() {
+  gameFinished = true;
+  sendStat('fin', `${score}/10 (${mode})`, '', '');
+
+  document.getElementById('quiz-screen').style.display = 'none';
+
+  const cards = questions.map((q, i) => {
+    const status = questionStatus[i];
+    const cls = status === 'incorrect' ? 'missed' : (attemptsPerQuestion[i] > 0 ? 'shaky' : '');
+    const userAnswerHtml = (status === 'incorrect' && userFinalAnswers[i])
+      ? `<div class="rc-config" style="color:#f44336;">Votre réponse : ${formatConfig(userFinalAnswers[i]) || '(aucune)'}</div>`
+      : '';
+    return `
+      <div class="review-card ${cls}">
+        <div class="rc-num">Question ${i + 1}${q.isException ? ' — exception' : ''}</div>
+        <div class="rc-elem">${q.label.details}</div>
+        <div class="rc-config">Réponse attendue : ${formatConfig(q.pairs)}</div>
+        ${userAnswerHtml}
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('recap-screen').innerHTML = `
+    <h2>Quiz terminé !</h2>
+    <div class="stats-row">
+      <span>Score final : ${score}/10</span>
+      <span>Premier coup : ${perfectCount}</span>
+      <span>Après essais : ${retryCount}</span>
+      <span>Échecs : ${wrongCount}</span>
+    </div>
+    <div class="review-grid">${cards}</div>
+    <div class="action-row" style="margin-top:20px;">
+      <button class="primary" onclick="location.reload()">Rejouer</button>
+    </div>
+  `;
+  document.getElementById('recap-screen').style.display = 'block';
+}
+</script>
+
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script>
+</body>
+</html>
