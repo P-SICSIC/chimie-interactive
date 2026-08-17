@@ -96,6 +96,39 @@
     padding: 0 20px;
   }
 
+  .name-card {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 14px rgba(28, 31, 46, 0.08);
+  }
+  .name-card label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .name-card input {
+    width: 100%;
+    max-width: 260px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  .name-card input:focus {
+    outline: none;
+    border-color: var(--lab-blue);
+  }
+  .name-hint {
+    margin: 8px 0 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -170,10 +203,16 @@
 <header>
   <div class="eyebrow">Boîte à outils</div>
   <h1>Chimie Interactive</h1>
-  <p>Quatre exercices pour réviser la chimie générale — tableau périodique, diffusion moléculaire, nomenclature et équilibrage rédox.</p>
+  <p>Cinq exercices pour réviser la chimie générale — tableau périodique, diffusion moléculaire, nomenclature, équilibrage rédox et configuration électronique.</p>
 </header>
 
 <main>
+  <div class="name-card">
+    <label for="studentName">Votre prénom (facultatif)</label>
+    <input type="text" id="studentName" placeholder="Ex: Alex" maxlength="40" autocomplete="off">
+    <p class="name-hint">Sert uniquement à ce que votre enseignant identifie vos statistiques de progression. Laissez vide pour rester anonyme.</p>
+  </div>
+
   <div class="grid">
     <a class="card" style="--accent:#215a82" href="tableau-periodique.html">
       <div class="card-top">
@@ -242,6 +281,12 @@
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
   }
+
+  const nameInput = document.getElementById('studentName');
+  nameInput.value = localStorage.getItem('chimie_student_name') || '';
+  nameInput.addEventListener('input', () => {
+    localStorage.setItem('chimie_student_name', nameInput.value.trim());
+  });
 </script>
 
 </body>

@@ -144,17 +144,17 @@
   .orbital-grid {
     display: grid;
     grid-template-columns: 26px repeat(4, 1fr);
-    gap: 4px;
-    max-width: 220px;
+    gap: 6px;
+    max-width: 420px;
   }
   .orbital-grid .col-header {
-    font-size: 11px;
+    font-size: 12px;
     color: #999;
     text-align: center;
     font-weight: bold;
   }
   .orbital-grid .row-header {
-    font-size: 11px;
+    font-size: 12px;
     color: #999;
     display: flex;
     align-items: center;
@@ -163,13 +163,13 @@
   .orbital-grid .orbital-btn {
     width: 100%;
     min-width: 0;
-    padding: 5px 2px;
+    padding: 10px 4px;
+    font-size: 13px;
   }
-  .orbital-grid .orbital-btn.invalid {
-    cursor: default;
-    color: #ccc;
-    background: #f5f5f5;
-    border-color: #eee;
+  .orbital-grid .orbital-btn.filled {
+    background: #e4ecf5;
+    border-color: #215a82;
+    font-weight: bold;
   }
 
   #countButtons {
@@ -178,6 +178,31 @@
   #countButtons .count-btn {
     min-width: 26px;
     padding: 5px 4px;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(28,31,46,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 20px;
+  }
+  .modal-box {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 320px;
+    width: 100%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  .modal-box h4 { margin: 0 0 12px 0; }
+  #modalCountButtons .count-btn {
+    min-width: 36px;
+    padding: 10px;
+    font-size: 15px;
   }
 
   .draft-zone {
@@ -345,20 +370,14 @@
       <div class="details" id="elementDetails"></div>
     </div>
 
-    <div class="panels">
-      <div class="panel">
-        <h4>Orbitales</h4>
-        <div class="btn-grid" id="orbitalButtons"></div>
-      </div>
-      <div class="panel">
-        <h4>Nombre d'électrons</h4>
-        <div class="btn-grid" id="countButtons"></div>
-      </div>
+    <div class="panel">
+      <h4>Orbitales — cliquez pour choisir le nombre d'électrons</h4>
+      <div class="btn-grid" id="orbitalButtons"></div>
     </div>
 
     <div class="draft-zone">
       <h4>Votre configuration</h4>
-      <div id="draftDisplay"><span class="draft-empty">Cliquez une orbitale puis un nombre d'électrons pour commencer.</span></div>
+      <div id="draftDisplay"><span class="draft-empty">Cliquez une orbitale pour commencer.</span></div>
     </div>
 
     <div id="exceptionWarning" class="exception-warning" style="display:none;">⚠️ Attention, cet élément fait partie des exceptions à la règle de Klechkowski.</div>
@@ -376,6 +395,18 @@
       <span>Premier coup: <span id="statPerfect">0</span></span>
       <span>Après essais: <span id="statRetry">0</span></span>
       <span>Échecs: <span id="statWrong">0</span></span>
+    </div>
+  </div>
+
+  <!-- Fenêtre modale : choix du nombre d'électrons pour l'orbitale cliquée -->
+  <div id="electronModalOverlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeElectronModal();">
+    <div class="modal-box">
+      <h4 id="electronModalTitle">Électrons</h4>
+      <div class="btn-grid" id="modalCountButtons"></div>
+      <div class="action-row" style="margin-top:14px;">
+        <button class="secondary" id="modalRemoveBtn" onclick="removeDraftPairFromModal()" style="display:none;">Retirer cette orbitale</button>
+        <button class="secondary" onclick="closeElectronModal()">Fermer</button>
+      </div>
     </div>
   </div>
 
@@ -403,6 +434,7 @@
       const payload = JSON.stringify({
         programme: PROGRAMME,
         session: getSessionId(),
+        etudiant: localStorage.getItem('chimie_student_name') || '',
         evenement: evenement,
         detail: detail || '',
         resultat: resultat || '',
@@ -422,6 +454,7 @@
       const payload = JSON.stringify({
         programme: PROGRAMME,
         session: getSessionId(),
+        etudiant: localStorage.getItem('chimie_student_name') || '',
         evenement: evenement,
         detail: detail || '',
         resultat: resultat || ''
@@ -525,29 +558,29 @@ const XE = { '1s':2,'2s':2,'2p':6,'3s':2,'3p':6,'4s':2,'3d':10,'4p':6,'5s':2,'4d
 const HE = { '1s':2 };
 
 const IONS = [
-  { z: 3, charge: '⁺', pairs: HE },
-  { z: 11, charge: '⁺', pairs: NE },
-  { z: 19, charge: '⁺', pairs: AR },
-  { z: 37, charge: '⁺', pairs: KR },
-  { z: 55, charge: '⁺', pairs: XE },
-  { z: 4, charge: '²⁺', pairs: HE },
-  { z: 12, charge: '²⁺', pairs: NE },
-  { z: 20, charge: '²⁺', pairs: AR },
-  { z: 38, charge: '²⁺', pairs: KR },
-  { z: 56, charge: '²⁺', pairs: XE },
-  { z: 9, charge: '⁻', pairs: NE },
-  { z: 17, charge: '⁻', pairs: AR },
-  { z: 35, charge: '⁻', pairs: KR },
-  { z: 53, charge: '⁻', pairs: XE },
-  { z: 26, charge: '²⁺', pairs: { ...AR, '3d':6 } },
-  { z: 26, charge: '³⁺', pairs: { ...AR, '3d':5 } },
-  { z: 29, charge: '²⁺', pairs: { ...AR, '3d':9 } },
-  { z: 30, charge: '²⁺', pairs: { ...AR, '3d':10 } },
-  { z: 25, charge: '²⁺', pairs: { ...AR, '3d':5 } },
-  { z: 24, charge: '³⁺', pairs: { ...AR, '3d':3 } },
-  { z: 47, charge: '⁺', pairs: { ...KR, '4d':10 } },
-  { z: 27, charge: '²⁺', pairs: { ...AR, '3d':7 } },
-  { z: 28, charge: '²⁺', pairs: { ...AR, '3d':8 } }
+  { z: 3, charge: '+', pairs: HE },
+  { z: 11, charge: '+', pairs: NE },
+  { z: 19, charge: '+', pairs: AR },
+  { z: 37, charge: '+', pairs: KR },
+  { z: 55, charge: '+', pairs: XE },
+  { z: 4, charge: '2+', pairs: HE },
+  { z: 12, charge: '2+', pairs: NE },
+  { z: 20, charge: '2+', pairs: AR },
+  { z: 38, charge: '2+', pairs: KR },
+  { z: 56, charge: '2+', pairs: XE },
+  { z: 9, charge: '-', pairs: NE },
+  { z: 17, charge: '-', pairs: AR },
+  { z: 35, charge: '-', pairs: KR },
+  { z: 53, charge: '-', pairs: XE },
+  { z: 26, charge: '2+', pairs: { ...AR, '3d':6 } },
+  { z: 26, charge: '3+', pairs: { ...AR, '3d':5 } },
+  { z: 29, charge: '2+', pairs: { ...AR, '3d':9 } },
+  { z: 30, charge: '2+', pairs: { ...AR, '3d':10 } },
+  { z: 25, charge: '2+', pairs: { ...AR, '3d':5 } },
+  { z: 24, charge: '3+', pairs: { ...AR, '3d':3 } },
+  { z: 47, charge: '+', pairs: { ...KR, '4d':10 } },
+  { z: 27, charge: '2+', pairs: { ...AR, '3d':7 } },
+  { z: 28, charge: '2+', pairs: { ...AR, '3d':8 } }
 ];
 
 // ============================================================
@@ -565,7 +598,6 @@ let userFinalAnswers = []; // dernier brouillon soumis, pour les questions écho
 let currentIndex = 0;
 let attemptsLeftForQuestion = 2;
 let draft = {};
-let selectedOrbital = null;
 
 let score = 0;
 let perfectCount = 0;
@@ -587,12 +619,17 @@ function pickRandom(arr, count, excludeFn) {
 
 function formatAtomLabel(z) {
   const el = elements[z];
-  return { big: el.symbol, details: `${el.name} — Z = ${z}` };
+  return { big: el.symbol, details: `${el.name} : Z = ${z}`, plain: `${el.symbol} (Z=${z})` };
 }
 
 function formatIonLabel(z, charge) {
   const el = elements[z];
-  return { big: `${el.symbol}${charge}`, details: `${el.name} (${el.symbol}${charge}) — Z(${el.symbol}) = ${z}` };
+  const bigHtml = `${el.symbol}<sup>${charge}</sup>`;
+  return {
+    big: bigHtml,
+    details: `${el.name} (${bigHtml}) : Z(${el.symbol}) = ${z}`,
+    plain: `${el.symbol}${charge} (Z=${z})`
+  };
 }
 
 function buildQuestionSet() {
@@ -642,7 +679,6 @@ function startGame(chosenMode) {
   document.getElementById('modePill').textContent = pillLabels[mode];
 
   renderOrbitalButtons();
-  renderCountButtons();
   loadQuestion(0);
   sendStat('start', mode, '', '');
 
@@ -657,6 +693,14 @@ function startGame(chosenMode) {
 // Rendu des panneaux
 // ============================================================
 
+// Liste complète des 24 cases de la grille (dans l'ordre d'affichage), y compris les
+// combinaisons physiquement impossibles (1p, 1d, 1f, 2d, 2f, 3f) — utilisée pour trier
+// l'affichage du brouillon quel que soit ce que l'étudiant a cliqué.
+const ALL_GRID_ORBITALS = [];
+for (let n = 1; n <= 6; n++) {
+  ['s','p','d','f'].forEach(sub => ALL_GRID_ORBITALS.push(n + sub));
+}
+
 function renderOrbitalButtons() {
   const container = document.getElementById('orbitalButtons');
   container.className = 'orbital-grid';
@@ -664,7 +708,6 @@ function renderOrbitalButtons() {
 
   const subshells = ['s', 'p', 'd', 'f'];
 
-  // Ligne d'en-têtes
   container.appendChild(document.createElement('div')); // coin vide
   subshells.forEach(sub => {
     const h = document.createElement('div');
@@ -673,72 +716,82 @@ function renderOrbitalButtons() {
     container.appendChild(h);
   });
 
-  // Lignes n = 1 à 6
   for (let n = 1; n <= 6; n++) {
     const rowLabel = document.createElement('div');
     rowLabel.className = 'row-header';
     rowLabel.textContent = 'n=' + n;
     container.appendChild(rowLabel);
 
-    subshells.forEach((sub, lIndex) => {
+    subshells.forEach(sub => {
       const orb = n + sub;
       const btn = document.createElement('div');
       btn.className = 'orbital-btn';
-      btn.textContent = orb;
       btn.dataset.orbital = orb;
-      btn.onclick = () => selectOrbital(orb, btn);
+      btn.onclick = () => openElectronModal(orb);
       container.appendChild(btn);
     });
   }
+  refreshOrbitalAvailability();
 }
 
-function renderCountButtons() {
-  const container = document.getElementById('countButtons');
+let modalOrbital = null;
+
+function openElectronModal(orb) {
+  modalOrbital = orb;
+  document.getElementById('electronModalTitle').textContent = `Nombre d'électrons pour ${orb}`;
+
+  const container = document.getElementById('modalCountButtons');
   container.innerHTML = '';
   for (let i = 1; i <= 14; i++) {
     const btn = document.createElement('div');
     btn.className = 'count-btn';
     btn.textContent = i;
-    btn.onclick = () => selectCount(i);
+    if (draft[orb] === i) btn.classList.add('selected');
+    btn.onclick = () => {
+      draft[orb] = i;
+      renderDraft();
+      refreshOrbitalAvailability();
+      closeElectronModal();
+    };
     container.appendChild(btn);
   }
+
+  document.getElementById('modalRemoveBtn').style.display = draft.hasOwnProperty(orb) ? 'inline-block' : 'none';
+  document.getElementById('electronModalOverlay').style.display = 'flex';
 }
 
-function selectOrbital(orb, btnEl) {
-  if (draft.hasOwnProperty(orb)) return; // déjà utilisée
-  document.querySelectorAll('.orbital-btn').forEach(b => b.classList.remove('selected'));
-  if (selectedOrbital === orb) {
-    selectedOrbital = null;
-  } else {
-    selectedOrbital = orb;
-    btnEl.classList.add('selected');
+function closeElectronModal() {
+  document.getElementById('electronModalOverlay').style.display = 'none';
+  modalOrbital = null;
+}
+
+function removeDraftPairFromModal() {
+  if (modalOrbital) {
+    delete draft[modalOrbital];
+    renderDraft();
+    refreshOrbitalAvailability();
   }
-}
-
-function selectCount(n) {
-  if (!selectedOrbital) return;
-  draft[selectedOrbital] = n;
-  selectedOrbital = null;
-  renderDraft();
-  refreshOrbitalAvailability();
+  closeElectronModal();
 }
 
 function refreshOrbitalAvailability() {
   document.querySelectorAll('.orbital-btn').forEach(b => {
-    b.classList.remove('selected');
-    if (draft.hasOwnProperty(b.dataset.orbital)) {
-      b.classList.add('used');
+    const orb = b.dataset.orbital;
+    if (draft.hasOwnProperty(orb)) {
+      b.classList.add('filled');
+      b.innerHTML = `${orb}<sup>${draft[orb]}</sup>`;
     } else {
-      b.classList.remove('used');
+      b.classList.remove('filled');
+      b.textContent = orb;
     }
   });
 }
 
 function renderDraft() {
   const container = document.getElementById('draftDisplay');
-  const keys = ORBITAL_ORDER.filter(o => draft.hasOwnProperty(o));
+  const keys = ALL_GRID_ORBITALS.filter(o => draft.hasOwnProperty(o));
   if (keys.length === 0) {
-    container.innerHTML = '<span class="draft-empty">Cliquez une orbitale puis un nombre d\'électrons pour commencer.</span>';
+    container.innerHTML = '<span class="draft-empty">Cliquez une orbitale pour commencer.</span>';
     return;
   }
   container.innerHTML = keys.map(orb => `
@@ -754,7 +807,6 @@ function removeDraftPair(orb) {
 
 function clearDraft() {
   draft = {};
-  selectedOrbital = null;
   renderDraft();
   refreshOrbitalAvailability();
 }
@@ -771,8 +823,8 @@ function loadQuestion(index) {
 
   document.getElementById('questionNumber').textContent = index + 1;
   document.getElementById('score').textContent = score;
-  document.getElementById('elementSymbol').textContent = q.label.big;
-  document.getElementById('elementDetails').textContent = q.label.details;
+  document.getElementById('elementSymbol').innerHTML = q.label.big;
+  document.getElementById('elementDetails').innerHTML = q.label.details;
   document.getElementById('attemptsLeft').textContent = `Essais restants : ${attemptsLeftForQuestion}`;
   document.getElementById('feedback').textContent = '';
   document.getElementById('feedback').className = '';
@@ -825,7 +877,7 @@ function checkAnswer() {
 
     feedbackEl.textContent = 'Correct !';
     feedbackEl.className = 'correct';
-    sendStat('reponse', q.label.details, usedAttempts === 0 ? 'premier_coup' : 'apres_essais', usedAttempts);
+    sendStat('reponse', q.label.plain, usedAttempts === 0 ? 'premier_coup' : 'apres_essais', usedAttempts);
     updateStatsDisplay();
     renderProgressSquares();
 
@@ -843,7 +895,7 @@ function checkAnswer() {
       wrongCount++;
       feedbackEl.innerHTML = `Incorrect. La bonne configuration était : <strong>${formatConfig(q.pairs)}</strong>`;
       feedbackEl.className = 'incorrect';
-      sendStat('reponse', q.label.details, 'echec', attemptsAllowed);
+      sendStat('reponse', q.label.plain, 'echec', attemptsAllowed);
       updateStatsDisplay();
       renderProgressSquares();
       setTimeout(advance, 1500);
@@ -863,12 +915,7 @@ function checkAnswer() {
 }
 
 function formatConfig(pairs) {
-  return ORBITAL_ORDER.filter(o => pairs[o] > 0).map(o => `${o}${toSuperscript(pairs[o])}`).join(' ');
-}
-
-function toSuperscript(n) {
-  const map = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
-  return String(n).split('').map(d => map[d]).join('');
+  return ORBITAL_ORDER.filter(o => pairs[o] > 0).map(o => `${o}<sup>${pairs[o]}</sup>`).join(' ');
 }
 
 function findNextPending(fromIndex) {
