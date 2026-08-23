@@ -835,10 +835,15 @@ function loadQuestion(index) {
 }
 
 function configsEqual(a, b) {
-  const ak = Object.keys(a).filter(k => a[k] > 0);
-  const bk = Object.keys(b).filter(k => b[k] > 0);
+  const ak = Object.keys(a).filter(k => a[k] > 0); // ordre d'ajout par l'étudiant
+  const bk = ORBITAL_ORDER.filter(k => b[k] > 0);  // ordre de Klechkowski attendu
   if (ak.length !== bk.length) return false;
-  return ak.every(k => a[k] === b[k]);
+  // Contenu ET ordre doivent correspondre
+  for (let i = 0; i < ak.length; i++) {
+    if (ak[i] !== bk[i]) return false;
+    if (a[ak[i]] !== b[ak[i]]) return false;
+  }
+  return true;
 }
 
 function buildHints(userPairs, correctPairs) {
@@ -857,6 +862,15 @@ function buildHints(userPairs, correctPairs) {
   const userTotal = Object.values(userPairs).reduce((a, b) => a + b, 0);
   const correctTotal = Object.values(correctPairs).reduce((a, b) => a + b, 0);
   if (userTotal !== correctTotal) messages.push(`Le nombre total d'électrons ne correspond pas (vous avez ${userTotal}, attendu ${correctTotal}).`);
+
+  // Si le contenu (orbitales + nombres d'électrons) est correct, vérifier l'ordre d'ajout
+  if (missing.length === 0 && extra.length === 0 && wrongCountKeys.length === 0) {
+    const correctOrder = ORBITAL_ORDER.filter(o => correctPairs[o] > 0);
+    const orderOk = userKeys.length === correctOrder.length && userKeys.every((o, i) => o === correctOrder[i]);
+    if (!orderOk) {
+      messages.push(`Les orbitales choisies sont correctes, mais pas dans l'ordre de remplissage (règle de Klechkowski).`);
+    }
+  }
 
   return messages;
 }
@@ -881,7 +895,7 @@ function checkAnswer() {
     updateStatsDisplay();
     renderProgressSquares();
 
-    setTimeout(advance, 700);
+    setTimeout(advance, 1600);
   } else {
     attemptsLeftForQuestion--;
 
@@ -898,7 +912,7 @@ function checkAnswer() {
       sendStat('reponse', q.label.plain, 'echec', attemptsAllowed);
       updateStatsDisplay();
       renderProgressSquares();
-      setTimeout(advance, 1500);
+      setTimeout(advance, 3000);
     } else {
       let html = `Incorrect. Essais restants : ${attemptsLeftForQuestion}`;
       if (hintsEnabled) {
@@ -916,6 +930,13 @@ function checkAnswer() {
 
 function formatConfig(pairs) {
   return ORBITAL_ORDER.filter(o => pairs[o] > 0).map(o => `${o}<sup>${pairs[o]}</sup>`).join(' ');
+}
+
+// Affiche la réponse telle que l'étudiant l'a construite : dans son ordre de saisie réel,
+// et en gardant les orbitales invalides éventuellement ajoutées (contrairement à formatConfig
+// qui ne connaît que les orbitales réelles et les affiche toujours dans l'ordre correct).
+function formatUserConfig(pairs) {
+  return Object.keys(pairs).map(o => `${o}<sup>${pairs[o]}</sup>`).join(' ');
 }
 
 function findNextPending(fromIndex) {
@@ -981,7 +1002,7 @@ function finishGame() {
     const status = questionStatus[i];
     const cls = status === 'incorrect' ? 'missed' : (attemptsPerQuestion[i] > 0 ? 'shaky' : '');
     const userAnswerHtml = (status === 'incorrect' && userFinalAnswers[i])
-      ? `<div class="rc-config" style="color:#f44336;">Votre réponse : ${formatConfig(userFinalAnswers[i]) || '(aucune)'}</div>`
+      ? `<div class="rc-config" style="color:#f44336;">Votre réponse : ${formatUserConfig(userFinalAnswers[i]) || '(aucune)'}</div>`
       : '';
     return `
       <div class="review-card ${cls}">
