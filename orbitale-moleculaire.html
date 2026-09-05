@@ -854,11 +854,6 @@ function validate(){
 
   document.querySelectorAll('.obox').forEach(b=>b.classList.remove('correct','incorrect'));
 
-  if(placed !== total){
-    showFeedback('info', `Il manque encore des électrons à placer : tu as positionné <b>${placed}</b> électron(s) sur <b>${total}</b> attendu(s) pour ${currentSpecies.formula.replace(/<[^>]+>/g,'')}.`);
-    return;
-  }
-
   let allCorrect=true;
   document.querySelectorAll('.obox').forEach(box=>{
     const id=box.dataset.box;
@@ -866,6 +861,12 @@ function validate(){
     box.classList.add(ok?'correct':'incorrect');
     if(!ok) allCorrect=false;
   });
+
+  if(placed !== total){
+    showFeedback('ko', `Il manque encore des électrons à placer : tu as positionné <b>${placed}</b> électron(s) sur <b>${total}</b> attendu(s) pour ${currentSpecies.formula.replace(/<[^>]+>/g,'')}. Les cases en <span style="color:var(--bad)">rouge</span> ne correspondent pas (encore) à la configuration attendue.`);
+    sendStat('diagramme', currentSpecies.formula.replace(/<[^>]+>/g,''), 'incomplet', '');
+    return;
+  }
 
   if(allCorrect){
     diagramLocked=true;
