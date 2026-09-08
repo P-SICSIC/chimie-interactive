@@ -854,16 +854,22 @@ function validate(){
 
   document.querySelectorAll('.obox').forEach(b=>b.classList.remove('correct','incorrect'));
 
-  let allCorrect=true;
-  document.querySelectorAll('.obox').forEach(box=>{
-    const id=box.dataset.box;
-    const ok=(studentConfig[id]||0)===(currentConfig[id]||0);
-    box.classList.add(ok?'correct':'incorrect');
-    if(!ok) allCorrect=false;
-  });
+  let allCorrect = placed === total;
+  if(allCorrect){
+    document.querySelectorAll('.obox').forEach(box=>{
+      const id=box.dataset.box;
+      if((studentConfig[id]||0) !== (currentConfig[id]||0)) allCorrect=false;
+    });
+  }
+
+  // En cas d'erreur, toutes les cases passent en rouge (pas seulement les fausses) :
+  // ça évite de révéler indirectement lesquelles étaient déjà correctes.
+  if(!allCorrect){
+    document.querySelectorAll('.obox').forEach(box=>box.classList.add('incorrect'));
+  }
 
   if(placed !== total){
-    showFeedback('ko', `Il manque encore des électrons à placer : tu as positionné <b>${placed}</b> électron(s) sur <b>${total}</b> attendu(s) pour ${currentSpecies.formula.replace(/<[^>]+>/g,'')}. Les cases en <span style="color:var(--bad)">rouge</span> ne correspondent pas (encore) à la configuration attendue.`);
+    showFeedback('ko', `Il manque encore des électrons à placer : tu as positionné <b>${placed}</b> électron(s) sur <b>${total}</b> attendu(s) pour ${currentSpecies.formula.replace(/<[^>]+>/g,'')}.`);
     sendStat('diagramme', currentSpecies.formula.replace(/<[^>]+>/g,''), 'incomplet', '');
     return;
   }
@@ -875,7 +881,7 @@ function validate(){
     document.getElementById('step2').classList.add('visible');
     sendStat('diagramme', currentSpecies.formula.replace(/<[^>]+>/g,''), 'correct', '');
   } else {
-    showFeedback('ko', `<b>Pas encore correct.</b> Le nombre total d'électrons est bon, mais la répartition dans les niveaux ne l'est pas (cases en <span style="color:var(--bad)">rouge</span> ; en <span style="color:var(--good)">vert</span> celles qui sont correctes). Vérifie l'ordre de remplissage (${currentSpecies.correlated?'π avant σ<sub>p</sub>':'σ<sub>p</sub> avant π'}) et la règle de Hund pour les orbitales dégénérées.`);
+    showFeedback('ko', `<b>Pas encore correct.</b> Le nombre total d'électrons est bon, mais la répartition dans les niveaux ne l'est pas. Vérifie l'ordre de remplissage (${currentSpecies.correlated?'π avant σ<sub>p</sub>':'σ<sub>p</sub> avant π'}) et la règle de Hund pour les orbitales dégénérées.`);
     sendStat('diagramme', currentSpecies.formula.replace(/<[^>]+>/g,''), 'incorrect', '');
   }
 }
