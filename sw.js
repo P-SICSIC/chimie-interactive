@@ -7,6 +7,7 @@ const APP_SHELL = [
   'equilibre-redox.html',
   'configuration-electronique.html',
   'orbitale-moleculaire.html',
+  'reaction-redox.html',
   'orbitals/ao-s.png',
   'orbitals/ao-p.png',
   'orbitals/mo-sigmas-bond.png',
