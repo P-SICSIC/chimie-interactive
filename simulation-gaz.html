@@ -323,6 +323,7 @@ function colorLeftParticles() {
     }
   });
   updateDiffusionPanel();
+  redrawStatic(); // affiche immédiatement le changement, même si la simulation est en pause
 }
 
 function resetColors() {
@@ -330,6 +331,15 @@ function resetColors() {
     particle.color = 'blue';
   });
   updateDiffusionPanel();
+  redrawStatic(); // affiche immédiatement le changement, même si la simulation est en pause
+}
+
+// Redessine une seule image (sans faire avancer la physique) : utile pour refléter
+// immédiatement un changement (comme la couleur) sans attendre que la simulation tourne.
+function redrawStatic() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => p.draw());
+  drawDivider();
 }
 
 function checkCollision(p1, p2) {

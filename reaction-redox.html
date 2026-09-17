@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2d2a4a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Réactions redox — animation</title>
+<script>
+(function() {
+  const STATS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyH4YmBCvc5sOrg_UJUfp9L7mgZtWHfB5cpKCkwGUfyHxkbhAbAqe1V3eFlBRHuBWvr/exec';
+  const PROGRAMME = 'reaction-redox';
+
+  function getSessionId() {
+    let id = sessionStorage.getItem('chimie_session_id');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)));
+      sessionStorage.setItem('chimie_session_id', id);
+    }
+    return id;
+  }
+
+  window.sendStat = function(evenement, detail, resultat, essais) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        etudiant: localStorage.getItem('chimie_student_name') || '',
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || '',
+        essais: essais !== undefined ? essais : ''
+      });
+      fetch(STATS_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
+  window.sendStatBeacon = function(evenement, detail, resultat) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        etudiant: localStorage.getItem('chimie_student_name') || '',
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || ''
+      });
+      const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' });
+      navigator.sendBeacon(STATS_ENDPOINT, blob);
+    } catch (e) {}
+  };
+})();
+</script>
+<style>
+  :root{
+    --navy:#2d2a4a; --lab-blue:#215a82; --paper:#f4f6fa; --ink:#1c1f2e; --muted:#6b7086;
+    --ox:#e5393f; --ox-bg:#fdecec;
+    --red:#2f6fed; --red-bg:#eaf1fe;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",ui-sans-serif,sans-serif;
+    background:var(--paper); color:var(--ink); padding-bottom:60px;
+  }
+  #app-home-button{
+    position:fixed; top:12px; left:12px; z-index:9999; background:var(--navy); color:#fff;
+    text-decoration:none; font-size:13px; padding:8px 14px; border-radius:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.25);
+  }
+  #app-home-button:hover{background:#423d6e;}
+
+  header{
+    background:linear-gradient(160deg, var(--navy) 0%, var(--lab-blue) 100%);
+    color:#fff; padding:50px 20px 30px 20px; text-align:center;
+  }
+  header h1{margin:0 0 6px 0; font-size:26px;}
+  header p{margin:0; opacity:.85; font-size:14px; max-width:560px; margin:0 auto;}
+
+  main{max-width:820px; margin:0 auto; padding:20px;}
+
+  /* --- Sélecteur de mode --- */
+  .mode-tabs{display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;}
+  .mode-tab{
+    flex:1; min-width:200px; background:var(--card); border:2px solid transparent; border-radius:12px;
+    padding:14px 16px; cursor:pointer; box-shadow:0 4px 14px rgba(28,31,46,.08); text-align:center;
+  }
+  .mode-tab.active{border-color:var(--lab-blue); background:#eef4fa;}
+  .mode-tab h3{margin:0 0 4px 0; font-size:15px;}
+  .mode-tab p{margin:0; font-size:12.5px; color:var(--muted);}
+
+  .panel{
+    background:var(--card); border-radius:14px; padding:22px; box-shadow:0 4px 14px rgba(28,31,46,.08);
+    margin-bottom:18px;
+  }
+
+  .equation{
+    text-align:center; font-size:19px; font-weight:700; margin-bottom:18px; letter-spacing:.01em;
+  }
+  .equation .ox{color:var(--ox);}
+  .equation .red{color:var(--red);}
+  .equation .arrow{color:var(--muted); margin:0 8px;}
+
+  /* --- Zone d'animation --- */
+  .stage{
+    position:relative; height:170px; background:linear-gradient(180deg,#fbfcff,#eef2f8);
+    border:1px solid #e3e7f0; border-radius:12px; overflow:hidden; margin-bottom:16px;
+  }
+  .particle{
+    position:absolute; top:50%; width:56px; height:56px; margin-top:-28px; margin-left:-28px;
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:15px; color:#fff; box-shadow:0 3px 8px rgba(0,0,0,.18);
+    transition:left 1.3s linear, background-color .35s ease, transform .35s ease;
+  }
+  .particle.ox{background:var(--ox);}
+  .particle.jsmove{transition:none !important;}
+  .particle.red{background:var(--red);}
+  .particle.pulse{transform:scale(1.25);}
+
+  .flash{
+    position:absolute; top:50%; width:10px; height:10px; margin-top:-5px; margin-left:-5px;
+    border-radius:50%; background:radial-gradient(circle, #fff7cc 0%, #ffd54f 40%, transparent 75%);
+    opacity:0; pointer-events:none;
+  }
+  .flash.go{animation:flashpop .55s ease-out forwards;}
+  @keyframes flashpop{
+    0%{opacity:0; width:10px; height:10px; margin-top:-5px; margin-left:-5px;}
+    35%{opacity:1; width:70px; height:70px; margin-top:-35px; margin-left:-35px;}
+    100%{opacity:0; width:90px; height:90px; margin-top:-45px; margin-left:-45px;}
+  }
+
+  .electron{
+    position:absolute; top:50%; margin-top:-9px; width:18px; height:18px; border-radius:50%;
+    background:#2d2a4a; color:#fff; font-size:10px; font-weight:800; display:flex;
+    align-items:center; justify-content:center; box-shadow:0 0 0 3px rgba(45,42,74,.15);
+    transition:left .55s linear; z-index:5;
+  }
+
+  .action-row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:6px;}
+  button.primary{
+    background:var(--lab-blue); color:#fff; border:none; padding:10px 22px; border-radius:8px;
+    font-size:15px; cursor:pointer;
+  }
+  button.primary:hover{background:#184a6b;}
+  button.primary:disabled{background:#b7c3cf; cursor:not-allowed;}
+  button.secondary{
+    background:#fff; color:#555; border:1px solid #ccc; padding:10px 16px; border-radius:8px;
+    font-size:14px; cursor:pointer;
+  }
+  button.secondary:hover{background:#f2f2f2;}
+  button.toggle{
+    background:#eef1f8; color:var(--navy); border:1px solid #dde3ef; padding:8px 16px; border-radius:20px;
+    font-size:13.5px; cursor:pointer; font-weight:600;
+  }
+  button.toggle.active{background:var(--navy); color:#fff; border-color:var(--navy);}
+
+  .hint{text-align:center; font-size:13px; color:var(--muted); margin-top:10px;}
+
+  /* --- Mode électrochimique --- */
+  .electrode{
+    position:absolute; left:0; top:0; bottom:0; width:22px;
+    background:linear-gradient(90deg,#5b5f6b,#9aa0ad);
+    border-right:2px solid #3d4048;
+  }
+  .electrode-label{
+    position:absolute; left:30px; top:8px; font-size:11px; color:var(--muted); font-weight:600;
+  }
+  .electrode-charge{
+    position:absolute; left:2px; top:50%; transform:translateY(-50%); font-size:16px; font-weight:800; color:#fff;
+  }
+
+  .circuit{position:relative; height:34px;}
+  .wire-line{position:absolute; top:0; left:11px; right:6px; height:3px; background:#5b5f6b; border-radius:2px;}
+  .wire-drop{position:absolute; top:0; left:10px; width:3px; height:34px; background:#5b5f6b;}
+  .circuit-label{position:absolute; right:0; top:6px; font-size:11px; color:var(--muted); font-weight:600;}
+  .electro-scene{position:relative;}
+
+  .e-pearl{
+    position:absolute; width:9px; height:9px; margin-left:-4.5px; margin-top:-4.5px; border-radius:50%;
+    background:#2d2a4a; box-shadow:0 0 0 2px rgba(45,42,74,.18); pointer-events:none; z-index:6;
+  }
+
+  .controls-row{display:flex; gap:20px; flex-wrap:wrap; align-items:center; justify-content:center; margin-top:14px;}
+  .control-group{display:flex; flex-direction:column; align-items:center; gap:6px;}
+  .control-group label{font-size:12px; color:var(--muted); font-weight:600;}
+  input[type=range]{width:180px;}
+
+  .intensity-box{display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .intensity-bar{width:180px; height:10px; background:#e6e9f0; border-radius:6px; overflow:hidden;}
+  .intensity-fill{height:100%; background:linear-gradient(90deg,#ffb74d,#e5393f); width:10%; transition:width .3s ease;}
+  .intensity-value{font-size:12.5px; color:var(--muted);}
+
+  .counter{text-align:center; font-size:13px; color:var(--muted); margin-top:10px;}
+</style>
+</head>
+<body>
+
+<a id="app-home-button" href="index.html">← Accueil</a>
+
+<header>
+  <h1>Réactions d'oxydoréduction</h1>
+  <p>Visualisez le transfert d'électron entre un oxydant et un réducteur, en solution ou à une électrode.</p>
+</header>
+
+<main>
+
+  <div class="mode-tabs">
+    <div class="mode-tab active" id="tabHomogene" onclick="setMode('homogene')">
+      <h3>⚗️ Réaction homogène</h3>
+      <p>Ox₁ et Red₂ se rencontrent en solution</p>
+    </div>
+    <div class="mode-tab" id="tabElectro" onclick="setMode('electro')">
+      <h3>🔌 Réaction à une électrode</h3>
+      <p>Transfert d'électron avec l'électrode</p>
+    </div>
+  </div>
+
+  <!-- ============ MODE HOMOGÈNE ============ -->
+  <div class="panel" id="panelHomogene">
+    <div class="equation">
+      <span class="ox">Ox₁</span> + <span class="red">Red₂</span>
+      <span class="arrow">→</span>
+      <span class="red">Red₁</span> + <span class="ox">Ox₂</span>
+    </div>
+
+    <div class="stage" id="stageHomogene">
+      <div class="particle ox" id="ballA" style="left:15%;">Ox₁</div>
+      <div class="particle red" id="ballB" style="left:85%;">Red₂</div>
+      <div class="flash" id="flashHomogene" style="left:50%;"></div>
+    </div>
+
+    <div class="action-row">
+      <button class="primary" id="btnCollide" onclick="runCollision()">Lancer la collision</button>
+      <button class="secondary" onclick="resetHomogene()">Réinitialiser</button>
+    </div>
+    <p class="hint">Ox₁ capte l'électron cédé par Red₂ : Ox₁ devient Red₁, Red₂ devient Ox₂.</p>
+  </div>
+
+  <!-- ============ MODE ÉLECTROCHIMIQUE ============ -->
+  <div class="panel" id="panelElectro" style="display:none;">
+    <div class="equation" id="electroEquation"></div>
+
+    <div class="action-row" style="margin-bottom:14px;">
+      <button class="toggle active" id="btnReduction" onclick="setElectroMode('reduction')">Réduction (à la cathode)</button>
+      <button class="toggle" id="btnOxydation" onclick="setElectroMode('oxydation')">Oxydation (à l'anode)</button>
+    </div>
+
+    <div class="electro-scene" id="electroScene">
+      <div class="circuit" id="circuitWire">
+        <div class="wire-line"></div>
+        <div class="wire-drop"></div>
+        <span class="circuit-label">circuit extérieur</span>
+      </div>
+      <div class="stage" id="stageElectro">
+        <div class="electrode"></div>
+        <div class="electrode-charge" id="electrodeCharge">−</div>
+        <div class="electrode-label">Électrode</div>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <div class="control-group">
+        <label>Vitesse de la réaction</label>
+        <input type="range" id="speedSlider" min="1" max="10" value="4" oninput="onSpeedChange()">
+      </div>
+      <div class="intensity-box">
+        <label style="font-size:12px;color:var(--muted);font-weight:600;">Intensité (débit d'électrons)</label>
+        <div class="intensity-bar"><div class="intensity-fill" id="intensityFill"></div></div>
+        <div class="intensity-value" id="intensityValue">≈ 0,3 e⁻/s</div>
+      </div>
+    </div>
+
+    <div class="action-row" style="margin-top:16px;">
+      <button class="primary" id="btnPlayPause" onclick="toggleElectroPlay()">Lancer</button>
+      <button class="secondary" onclick="resetElectro()">Réinitialiser</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+let currentMode = 'homogene';
+
+function setMode(mode){
+  currentMode = mode;
+  document.getElementById('tabHomogene').classList.toggle('active', mode==='homogene');
+  document.getElementById('tabElectro').classList.toggle('active', mode==='electro');
+  document.getElementById('panelHomogene').style.display = mode==='homogene' ? 'block' : 'none';
+  document.getElementById('panelElectro').style.display = mode==='electro' ? 'block' : 'none';
+  if(mode==='electro'){
+    stopElectroLoop();
+    updateElectroEquation();
+  }
+  sendStat('mode', mode, '', '');
+}
+
+/* ============================================================
+   MODE HOMOGÈNE
+   ============================================================ */
+let homogeneBusy = false;
+
+function resetHomogene(){
+  homogeneBusy = false;
+  const a = document.getElementById('ballA');
+  const b = document.getElementById('ballB');
+  a.style.left = '15%'; b.style.left = '85%';
+  a.className = 'particle ox'; a.textContent = 'Ox₁';
+  b.className = 'particle red'; b.textContent = 'Red₂';
+  document.getElementById('btnCollide').disabled = false;
+  document.getElementById('stageHomogene').querySelectorAll('.electron').forEach(el=>el.remove());
+}
+
+function runCollision(){
+  if(homogeneBusy) return;
+  homogeneBusy = true;
+  document.getElementById('btnCollide').disabled = true;
+  sendStat('collision', 'homogene', '', '');
+
+  const a = document.getElementById('ballA');
+  const b = document.getElementById('ballB');
+  const stage = document.getElementById('stageHomogene');
+
+  // Toujours repartir d'un état propre Ox1/Red2, même si la collision précédente
+  // n'a pas été explicitement réinitialisée (sinon on transfère un électron depuis
+  // un "Ox2" comme s'il pouvait en céder, ce qui n'a pas de sens chimiquement).
+  a.style.transition = 'none';
+  b.style.transition = 'none';
+  a.className = 'particle ox'; a.textContent = 'Ox₁'; a.style.left = '15%';
+  b.className = 'particle red'; b.textContent = 'Red₂'; b.style.left = '85%';
+  void a.offsetWidth; // force le navigateur à appliquer l'état ci-dessus avant de réactiver la transition
+  a.style.transition = '';
+  b.style.transition = '';
+
+  // 1) Les deux particules se rapprochent
+  a.style.left = 'calc(50% - 28px)';
+  b.style.left = 'calc(50% + 28px)';
+
+  setTimeout(()=>{
+    // 2) Flash au point de contact
+    const flash = document.getElementById('flashHomogene');
+    flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+
+    // 3) Un électron voyage de Red2 (réducteur, cède l'électron) vers Ox1 (oxydant, le capte)
+    const e = document.createElement('div');
+    e.className = 'electron'; e.textContent = 'e⁻';
+    e.style.left = '54%';
+    stage.appendChild(e);
+    requestAnimationFrame(()=> requestAnimationFrame(()=>{ e.style.left = '46%'; }));
+
+    setTimeout(()=>{
+      e.remove();
+      // 4) Les deux particules changent d'identité (le rôle s'inverse)
+      a.classList.add('pulse'); b.classList.add('pulse');
+      a.className = 'particle red pulse'; a.textContent = 'Red₁';
+      b.className = 'particle ox pulse'; b.textContent = 'Ox₂';
+      setTimeout(()=>{ a.classList.remove('pulse'); b.classList.remove('pulse'); }, 350);
+
+      // 5) Elles repartent chacune de leur côté
+      setTimeout(()=>{
+        a.style.left = '15%';
+        b.style.left = '85%';
+        setTimeout(()=>{
+          homogeneBusy = false;
+          document.getElementById('btnCollide').disabled = false;
+        }, 1400);
+      }, 700);
+    }, 550);
+  }, 1300);
+}
+
+/* ============================================================
+   MODE ÉLECTROCHIMIQUE
+   ============================================================ */
+let electroMode = 'reduction'; // 'reduction' ou 'oxydation'
+let electroPlaying = false;
+let electroTimer = null;
+
+function setElectroMode(mode){
+  if(electroMode === mode) return;
+  electroMode = mode;
+  document.getElementById('btnReduction').classList.toggle('active', mode==='reduction');
+  document.getElementById('btnOxydation').classList.toggle('active', mode==='oxydation');
+  document.getElementById('electrodeCharge').textContent = mode==='reduction' ? '−' : '−'; // toujours négative (excès d'électrons)
+  updateElectroEquation();
+  sendStat('mode_electrode', mode, '', '');
+}
+
+function updateElectroEquation(){
+  const eq = document.getElementById('electroEquation');
+  if(electroMode === 'reduction'){
+    eq.innerHTML = `<span class="ox">Ox</span> + n e⁻ <span class="arrow">→</span> <span class="red">Red</span>`;
+  } else {
+    eq.innerHTML = `<span class="red">Red</span> <span class="arrow">→</span> <span class="ox">Ox</span> + n e⁻`;
+  }
+}
+
+function speedToInterval(v){
+  // v: 1 (lent) .. 10 (rapide)  ->  intervalle 4000ms .. 400ms
+  return 4000 - (v-1) * 400;
+}
+
+function onSpeedChange(){
+  updateIntensityDisplay();
+  if(electroPlaying){
+    clearElectroTimer();
+    scheduleNextElectroEvent();
+  }
+}
+
+function updateIntensityDisplay(){
+  const v = parseInt(document.getElementById('speedSlider').value, 10);
+  const interval = speedToInterval(v);
+  const rate = 1000 / interval; // évènements par seconde
+  const pct = Math.round(((v-1) / 9) * 100);
+  document.getElementById('intensityFill').style.width = Math.max(6,pct) + '%';
+  document.getElementById('intensityValue').textContent = `≈ ${rate.toFixed(1)} e⁻/s`;
+}
+
+function toggleElectroPlay(){
+  if(electroPlaying){
+    stopElectroLoop();
+  } else {
+    electroPlaying = true;
+    document.getElementById('btnPlayPause').textContent = 'Pause';
+    sendStat('electro_lecture', electroMode, 'start', '');
+    scheduleNextElectroEvent();
+  }
+}
+
+function scheduleNextElectroEvent(){
+  const v = parseInt(document.getElementById('speedSlider').value, 10);
+  const interval = speedToInterval(v);
+  electroTimer = setTimeout(()=>{
+    spawnElectroParticle();
+    if(electroPlaying) scheduleNextElectroEvent();
+  }, interval);
+}
+
+// Arrête uniquement le minuteur en attente (utilisé quand on change la vitesse en cours
+// de lecture, pour reprogrammer le prochain évènement sans couper la lecture elle-même).
+function clearElectroTimer(){
+  if(electroTimer){ clearTimeout(electroTimer); electroTimer = null; }
+}
+
+function stopElectroLoop(){
+  electroPlaying = false;
+  clearElectroTimer();
+  document.getElementById('btnPlayPause').textContent = 'Lancer';
+}
+
+function resetElectro(){
+  stopElectroLoop();
+  document.getElementById('stageElectro').querySelectorAll('.particle,.electron,.flash').forEach(el=>el.remove());
+  document.getElementById('electroScene').querySelectorAll('.e-pearl').forEach(el=>el.remove());
+}
+
+function delay(ms){ return new Promise(res=>setTimeout(res, ms)); }
+function nextFrame(){ return new Promise(res=>requestAnimationFrame(()=>requestAnimationFrame(res))); }
+
+function pathLength(points){
+  let total = 0;
+  for(let i=1;i<points.length;i++){
+    const dx = points[i].x - points[i-1].x, dy = points[i].y - points[i-1].y;
+    total += Math.sqrt(dx*dx + dy*dy);
+  }
+  return total;
+}
+
+function pointAtDistance(points, dist){
+  let remaining = dist;
+  for(let i=1;i<points.length;i++){
+    const dx = points[i].x - points[i-1].x, dy = points[i].y - points[i-1].y;
+    const segLen = Math.sqrt(dx*dx + dy*dy);
+    if(remaining <= segLen || i === points.length-1){
+      const t = segLen === 0 ? 0 : Math.min(1, remaining/segLen);
+      return { x: points[i-1].x + dx*t, y: points[i-1].y + dy*t };
+    }
+    remaining -= segLen;
+  }
+  return points[points.length-1];
+}
+
+// Vitesse commune, constante, des particules ET des électrons (px/s). Elle ne dépend
+// jamais du slider : seule la fréquence des évènements en dépend (voir speedToInterval).
+const ELECTRO_SPEED = 240;
+
+/* Fait avancer un élément déjà présent dans le DOM le long d'un chemin, à vitesse
+   constante (durationMs est calculé à partir de la longueur du chemin et de ELECTRO_SPEED
+   par l'appelant). Résout une fois l'arrivée atteinte. */
+function runAlongPath(el, path, durationMs){
+  const total = pathLength(path);
+  return new Promise(resolve=>{
+    const start = performance.now();
+    function step(now){
+      const t = (now - start) / durationMs;
+      if(t >= 1){
+        const end = path[path.length-1];
+        el.style.left = end.x + 'px'; el.style.top = end.y + 'px';
+        resolve();
+        return;
+      }
+      const pos = pointAtDistance(path, t*total);
+      el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px';
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+/* Crée une perle d'électron et la fait voyager le long d'un chemin, à vitesse constante,
+   avec un léger fondu à l'apparition/disparition. Ne bloque jamais l'appelant (fire and
+   forget) : plusieurs perles peuvent ainsi être en vol en même temps sur le fil, ce qui
+   donne le flux continu dès que l'intervalle entre réactions est plus court que la durée
+   du trajet. */
+function runPearlAlongPath(path, durationMs){
+  const scene = document.getElementById('electroScene');
+  const el = document.createElement('div');
+  el.className = 'e-pearl';
+  el.style.opacity = '0';
+  el.style.left = path[0].x + 'px';
+  el.style.top = path[0].y + 'px';
+  scene.appendChild(el);
+
+  const total = pathLength(path);
+  const start = performance.now();
+  function step(now){
+    const t = (now - start) / durationMs;
+    if(t >= 1){ el.remove(); return; }
+    const pos = pointAtDistance(path, t*total);
+    el.style.left = pos.x + 'px'; el.style.top = pos.y + 'px';
+    el.style.opacity = t < 0.08 ? (t/0.08) : (t > 0.9 ? (1-t)/0.1 : 1);
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function flashAt(x, y){
+  const scene = document.getElementById('electroScene');
+  const flash = document.createElement('div');
+  flash.className = 'flash go';
+  flash.style.left = x + 'px'; flash.style.top = y + 'px';
+  scene.appendChild(flash);
+  setTimeout(()=>flash.remove(), 600);
+}
+
+/* Construit le chemin complet fil extérieur -> électrode -> particule (ou l'inverse),
+   dans le repère de #electroScene (qui englobe le fil ET la zone réactionnelle, pour
+   qu'il n'y ait aucun saut entre les deux). */
+function buildElectronPath(yOffsetPx, reduction){
+  const scene = document.getElementById('electroScene');
+  const circuitH = document.getElementById('circuitWire').offsetHeight;
+  const sceneW = scene.getBoundingClientRect().width;
+  const WIRE_Y = 6, DROP_X = 11, ELECTRODE_EDGE = 22, CONTACT = 50;
+
+  const points = [
+    { x: sceneW - 15, y: WIRE_Y },                    // départ : circuit extérieur (à droite)
+    { x: DROP_X, y: WIRE_Y },                          // le long du fil jusqu'à l'aplomb de l'électrode
+    { x: DROP_X, y: circuitH },                        // descend jusqu'au sommet de l'électrode
+    { x: DROP_X, y: circuitH + yOffsetPx },            // descend dans l'électrode jusqu'à la hauteur de la particule
+    { x: ELECTRODE_EDGE, y: circuitH + yOffsetPx },    // bord de l'électrode
+    { x: CONTACT, y: circuitH + yOffsetPx }            // arrivée dans la particule
+  ];
+  return reduction ? points : points.slice().reverse();
+}
+
+/* Chemin d'une particule (réactif) : point de départ à droite jusqu'au contact avec
+   l'électrode. Même repère de coordonnées que buildElectronPath (#electroScene). */
+function buildParticlePath(yOffsetPx){
+  const scene = document.getElementById('electroScene');
+  const circuitH = document.getElementById('circuitWire').offsetHeight;
+  const sceneW = scene.getBoundingClientRect().width;
+  const CONTACT = 50;
+  const y = circuitH + yOffsetPx;
+  return [ { x: sceneW - 40, y }, { x: CONTACT, y } ];
+}
+function buildDepartPath(yOffsetPx){
+  const p = buildParticlePath(yOffsetPx);
+  return [ p[1], p[0] ];
+}
+
+async function spawnElectroParticle(){
+  const scene = document.getElementById('electroScene');
+  const stage = document.getElementById('stageElectro');
+  const reduction = electroMode === 'reduction';
+  const yOffsetPx = 20 + Math.random() * Math.max(10, stage.offsetHeight - 40);
+
+  const particlePath = buildParticlePath(yOffsetPx);
+  const particleDuration = (pathLength(particlePath) / ELECTRO_SPEED) * 1000;
+  const contact = particlePath[1];
+
+  const p = document.createElement('div');
+  p.className = 'particle jsmove ' + (reduction ? 'ox' : 'red');
+  p.textContent = reduction ? 'Ox' : 'Red';
+  p.style.left = particlePath[0].x + 'px';
+  p.style.top = particlePath[0].y + 'px';
+
+  if(reduction){
+    // L'électron vient du circuit extérieur : son trajet est en général plus long que
+    // celui de la particule. On calcule le décalage de départ de chacun pour qu'ils
+    // arrivent tous les deux au contact au même instant, sans jamais démarrer "avant
+    // maintenant" (on retarde toujours celui des deux qui a le plus court chemin).
+    const wirePath = buildElectronPath(yOffsetPx, true);
+    const wireDuration = (pathLength(wirePath) / ELECTRO_SPEED) * 1000;
+    const particleDelay = Math.max(0, wireDuration - particleDuration);
+    const electronDelay = Math.max(0, particleDuration - wireDuration);
+
+    setTimeout(()=> runPearlAlongPath(wirePath, wireDuration), electronDelay);
+
+    await delay(particleDelay);
+    scene.appendChild(p);
+    await runAlongPath(p, particlePath, particleDuration);
+
+    flashAt(contact.x, contact.y);
+    p.classList.add('pulse');
+    p.className = 'particle jsmove red pulse'; p.textContent = 'Red';
+    setTimeout(()=>p.classList.remove('pulse'), 350);
+  } else {
+    // L'électron n'existe comme porteur libre qu'une fois cédé par la particule à
+    // l'électrode : son trajet ne peut donc démarrer qu'après l'arrivée de celle-ci.
+    scene.appendChild(p);
+    await runAlongPath(p, particlePath, particleDuration);
+
+    flashAt(contact.x, contact.y);
+    p.classList.add('pulse');
+    p.className = 'particle jsmove ox pulse'; p.textContent = 'Ox';
+    setTimeout(()=>p.classList.remove('pulse'), 350);
+
+    const wirePath = buildElectronPath(yOffsetPx, false);
+    const wireDuration = (pathLength(wirePath) / ELECTRO_SPEED) * 1000;
+    runPearlAlongPath(wirePath, wireDuration);
+  }
+
+  await delay(450);
+  const departPath = buildDepartPath(yOffsetPx);
+  await runAlongPath(p, departPath, particleDuration);
+  p.remove();
+}
+
+/* ============================================================
+   Initialisation
+   ============================================================ */
+updateElectroEquation();
+updateIntensityDisplay();
+sendStat('start', currentMode, '', '');
+
+window.addEventListener('pagehide', function(){
+  stopElectroLoop();
+});
+</script>
+
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script>
+</body>
+</html>
