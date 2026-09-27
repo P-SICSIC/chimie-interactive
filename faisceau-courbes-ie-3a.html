@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script>
+(function() {
+  const STATS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyH4YmBCvc5sOrg_UJUfp9L7mgZtWHfB5cpKCkwGUfyHxkbhAbAqe1V3eFlBRHuBWvr/exec';
+  const PROGRAMME = 'faisceau-courbes-ie-3a';
+
+  function getSessionId() {
+    let id = sessionStorage.getItem('chimie_session_id');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16)));
+      sessionStorage.setItem('chimie_session_id', id);
+    }
+    return id;
+  }
+
+  window.sendStat = function(evenement, detail, resultat, essais) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        etudiant: localStorage.getItem('chimie_student_name') || '',
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || '',
+        essais: essais !== undefined ? essais : ''
+      });
+      fetch(STATS_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      }).catch(() => {});
+    } catch (e) {}
+  };
+
+  window.sendStatBeacon = function(evenement, detail, resultat) {
+    try {
+      const payload = JSON.stringify({
+        programme: PROGRAMME,
+        session: getSessionId(),
+        etudiant: localStorage.getItem('chimie_student_name') || '',
+        evenement: evenement,
+        detail: detail || '',
+        resultat: resultat || ''
+      });
+      const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' });
+      navigator.sendBeacon(STATS_ENDPOINT, blob);
+    } catch (e) {}
+  };
+})();
+</script>
+<meta name="theme-color" content="#2d2a4a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Courbes i-E — titrage Fe²⁺ par Ce⁴⁺</title>
+<style>
+  :root{
+    --bg:#fafaf9;
+    --ink:#1a1a1a;
+    --muted:#6b6b6b;
+    --line:#cccccc;
+    --line-minor:#e6e6e6;
+    --panel:#ffffff;
+    --border:#d8d8d6;
+    --violet:#7b2cbf;
+    --blue:#1f6fb2;
+    --green:#1f9e4f;
+    --orange:#e07b00;
+    --red:#c81d25;
+    --cursor:#000000;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:"Georgia","Iowan Old Style", ui-serif, serif;}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 20px 48px;}
+  h1{font-size:1.35rem;font-weight:600;letter-spacing:.01em;margin:0 0 2px;}
+  p.sub{color:var(--muted);font-size:.92rem;margin:0 0 22px;line-height:1.5;}
+  .stage{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+    padding:18px 18px 10px;}
+  svg{display:block;width:100%;height:auto;}
+  .controls{display:flex;align-items:center;gap:16px;padding:18px 6px 6px;
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;}
+  .controls label{font-size:.88rem;color:var(--muted);white-space:nowrap;}
+  input[type=range]{flex:1;accent-color:var(--cursor);height:4px;}
+  .xval{font-variant-numeric:tabular-nums;font-size:1.02rem;font-weight:600;
+    min-width:74px;text-align:right;font-family:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px 22px;padding:16px 6px 4px;
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;font-size:.85rem;color:var(--ink);}
+  .legend .item{display:flex;align-items:center;gap:7px;}
+  .swatch{width:20px;height:3px;border-radius:2px;display:inline-block;}
+  .note{color:var(--muted);font-size:.8rem;margin-top:14px;line-height:1.5;
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;}
+  .axislabel{font-family:"Georgia",serif;font-style:italic;font-size:15px;fill:var(--ink);}
+  .ticklabel{font-family:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size:12px;fill:var(--ink);}
+  .walllabel{font-family:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size:10.5px;fill:#8a8a8a;}
+  #app-home-button {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 9999;
+    background: #2d2a4a;
+    color: #fff;
+    text-decoration: none;
+    font-family: ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  #app-home-button:hover { background: #423d6e; }
+</style>
+</head>
+<body>
+<a id="app-home-button" href="index.html">← Accueil</a>
+<div class="wrap">
+  <h1>Courbes intensité–potentiel — titrage d'une solution de Fe²⁺ par du Ce⁴⁺</h1>
+  <p class="sub">Les 5 courbes de référence (x = 0 · 0,5 · 1 · 1,5 · 2, où x = V(Ce⁴⁺ ajouté)/V(équivalence))
+    sont fixes. Déplace le curseur pour faire glisser une 6ᵉ courbe, en noir : elle se superpose exactement
+    aux courbes fixes lorsque x tombe sur 0, 0,5, 1, 1,5 ou 2.</p>
+
+  <div class="stage">
+    <svg id="chart" viewBox="0 0 1000 820" xmlns="http://www.w3.org/2000/svg"></svg>
+
+    <div class="controls">
+      <label for="xSlider">x (avancement du titrage)</label>
+      <input type="range" id="xSlider" min="0" max="2" step="0.01" value="0.75">
+      <span class="xval" id="xVal">0,75</span>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <p class="note">Modèle : E°(Fe³⁺/Fe²⁺) = 0,77 V, E°(Ce⁴⁺/Ce³⁺) = 1,44 V. Palier bas = −10x, saut 1 d'amplitude
+    constante 10 µA, saut 2 d'amplitude 10x — les 5 courbes se rejoignent toutes à 10 µA entre 1,5 V et 1,9 V
+    (conservation [Fe²⁺]+[Ce³⁺] = constante), avant de se re-séparer légèrement au mur du solvant en oxydation
+    (~2,05 V). Mur du solvant en réduction vers −0,7 V, commun aux 6 courbes. Axes coupés à −25 / +20 µA.</p>
+</div>
+
+<script>
+(function(){
+  // ---------- Modèle physico-chimique (identique au tracé matplotlib) ----------
+  const E1 = 0.77, E2 = 1.44, E3 = 2.05, E4 = -0.70;
+  const w = 0.020, w3 = 0.018, w4 = 0.06;
+
+  function sigmoid(E, E0, width){ return 1 / (1 + Math.exp(-(E - E0) / width)); }
+
+  function curveValue(E, x){
+    let i = -10 * x;
+    i += 10 * sigmoid(E, E1, w);
+    i += 10 * x * sigmoid(E, E2, w);
+    i += -28 * (1 - sigmoid(E, E4, w4));
+    i += 3 * x * sigmoid(E, 2.00, 0.03);
+    i += 15 * sigmoid(E, E3, w3);
+    return i;
+  }
+
+  // ---------- Échelles ----------
+  const X_MIN = -1, X_MAX = 2.5, Y_MIN = -25, Y_MAX = 20;
+  const padL = 78, padR = 40, padT = 56, padB = 56;
+  const svgW = 1000, svgH = 820;
+  const plotW = svgW - padL - padR;
+  const plotH = svgH - padT - padB;
+
+  const sx = E => padL + (E - X_MIN) / (X_MAX - X_MIN) * plotW;
+  const sy = i => padT + (Y_MAX - i) / (Y_MAX - Y_MIN) * plotH;
+
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById('chart');
+  function el(tag, attrs){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function frNum(v){
+    if (Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v));
+    return v.toFixed(1).replace('.', ',');
+  }
+
+  // ---------- Zone de coupe (clip) ----------
+  const defs = el('defs', {});
+  const clip = el('clipPath', {id:'plotClip'});
+  clip.appendChild(el('rect', {x:padL, y:padT, width:plotW, height:plotH}));
+  defs.appendChild(clip);
+  svg.appendChild(defs);
+
+  // ---------- Grille ----------
+  const gGrid = el('g', {});
+  for (let e = -1; e <= 2.5001; e += 0.1){
+    const major = Math.abs(Math.round(e*10) % 5) === 0;
+    gGrid.appendChild(el('line', {
+      x1:sx(e), y1:padT, x2:sx(e), y2:padT+plotH,
+      stroke: major ? '#cccccc' : '#e6e6e6',
+      'stroke-width': major ? 0.9 : 0.6
+    }));
+  }
+  for (let i = -25; i <= 20.001; i += 5){
+    gGrid.appendChild(el('line', {
+      x1:padL, y1:sy(i), x2:padL+plotW, y2:sy(i),
+      stroke:'#cccccc', 'stroke-width':0.9
+    }));
+  }
+  svg.appendChild(gGrid);
+
+  // ---------- Repères des potentiels / murs ----------
+  const gRef = el('g', {});
+  [E1, E2].forEach(e=>{
+    gRef.appendChild(el('line', {x1:sx(e),y1:padT,x2:sx(e),y2:padT+plotH,
+      stroke:'#999', 'stroke-width':1, 'stroke-dasharray':'2,3'}));
+  });
+  [E3, E4].forEach(e=>{
+    gRef.appendChild(el('line', {x1:sx(e),y1:padT,x2:sx(e),y2:padT+plotH,
+      stroke:'#aaa', 'stroke-width':1, 'stroke-dasharray':'2,3'}));
+  });
+  svg.appendChild(gRef);
+
+  const labels = [
+    [E1, "0,77 V"], [E2, "1,44 V"],
+    [E3, "2,05 V\n(mur solvant, oxyd.)"], [E4, "-0,7 V\n(mur solvant, réd.)"]
+  ];
+  labels.forEach(([e, txt])=>{
+    const lines = txt.split('\n');
+    lines.forEach((line, idx)=>{
+      const t = el('text', {x:sx(e), y: padT - 30 + idx*12, 'text-anchor':'middle', class:'walllabel'});
+      t.textContent = line;
+      svg.appendChild(t);
+    });
+  });
+
+  // ---------- Graduations ----------
+  const gTicks = el('g', {});
+  for (let e = -1; e <= 2.5001; e += 0.5){
+    const t = el('text', {x:sx(e), y:padT+plotH+20, 'text-anchor':'middle', class:'ticklabel'});
+    t.textContent = frNum(e);
+    gTicks.appendChild(t);
+  }
+  for (let i = -25; i <= 20.001; i += 5){
+    const t = el('text', {x:padL-10, y:sy(i)+4, 'text-anchor':'end', class:'ticklabel'});
+    t.textContent = frNum(i);
+    gTicks.appendChild(t);
+  }
+  svg.appendChild(gTicks);
+
+  // ---------- Axes en gras ----------
+  const gAxes = el('g', {});
+  gAxes.appendChild(el('line', {x1:padL, y1:sy(0), x2:padL+plotW, y2:sy(0), stroke:'#000', 'stroke-width':2.4}));
+  gAxes.appendChild(el('line', {x1:sx(0), y1:padT+plotH, x2:sx(0), y2:padT, stroke:'#000', 'stroke-width':2.4}));
+  // pointes de flèche
+  const ah = 9;
+  gAxes.appendChild(el('polygon', {points:
+    `${padL+plotW},${sy(0)} ${padL+plotW-ah*1.6},${sy(0)-ah*0.6} ${padL+plotW-ah*1.6},${sy(0)+ah*0.6}`,
+    fill:'#000'}));
+  gAxes.appendChild(el('polygon', {points:
+    `${sx(0)},${padT} ${sx(0)-ah*0.6},${padT+ah*1.6} ${sx(0)+ah*0.6},${padT+ah*1.6}`,
+    fill:'#000'}));
+  svg.appendChild(gAxes);
+
+  svg.appendChild(Object.assign(el('text', {x:padL+plotW+8, y:sy(0)+5, class:'axislabel'}), {textContent:'E (V/ENH)'}));
+  svg.appendChild(Object.assign(el('text', {x:sx(0)+8, y:padT-8, class:'axislabel'}), {textContent:'i (µA)'}));
+
+  // ---------- Courbes ----------
+  const N = 700;
+  function pathFor(x){
+    let d = '';
+    for (let k=0; k<=N; k++){
+      const E = X_MIN + (X_MAX-X_MIN)*k/N;
+      const i = curveValue(E, x);
+      d += (k===0 ? 'M' : 'L') + sx(E).toFixed(2) + ',' + sy(i).toFixed(2) + ' ';
+    }
+    return d;
+  }
+
+  const fixed = [
+    {x:0,   color:'#7b2cbf', label:'x = 0'},
+    {x:0.5, color:'#1f6fb2', label:'x = 0,5'},
+    {x:1,   color:'#1f9e4f', label:'x = 1'},
+    {x:1.5, color:'#e07b00', label:'x = 1,5'},
+    {x:2,   color:'#c81d25', label:'x = 2'}
+  ];
+
+  const gCurves = el('g', {'clip-path':'url(#plotClip)'});
+  fixed.forEach(c=>{
+    gCurves.appendChild(el('path', {
+      d: pathFor(c.x), fill:'none', stroke:c.color, 'stroke-width':2.2,
+      'stroke-linecap':'round', 'stroke-linejoin':'round'
+    }));
+  });
+  const cursorPath = el('path', {
+    d: pathFor(0.75), fill:'none', stroke:'#000000', 'stroke-width':3,
+    'stroke-linecap':'round', 'stroke-linejoin':'round'
+  });
+  gCurves.appendChild(cursorPath);
+  svg.appendChild(gCurves);
+
+  // ---------- Légende ----------
+  const legend = document.getElementById('legend');
+  const legendItems = fixed.concat([{x:'curseur', color:'#000000', label:'x = curseur'}]);
+  legendItems.forEach(c=>{
+    const item = document.createElement('div');
+    item.className = 'item';
+    const sw = document.createElement('span');
+    sw.className = 'swatch';
+    sw.style.background = c.color;
+    const txt = document.createElement('span');
+    txt.textContent = c.label;
+    item.appendChild(sw);
+    item.appendChild(txt);
+    legend.appendChild(item);
+  });
+
+  // ---------- Curseur interactif ----------
+  const slider = document.getElementById('xSlider');
+  const xVal = document.getElementById('xVal');
+  function update(){
+    const x = parseFloat(slider.value);
+    xVal.textContent = x.toFixed(2).replace('.', ',');
+    cursorPath.setAttribute('d', pathFor(x));
+  }
+  slider.addEventListener('input', update);
+  update();
+  sendStat('start', '', '', '');
+})();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}</script>
+</body>
+</html>

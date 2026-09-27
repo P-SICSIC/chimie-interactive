@@ -8,6 +8,7 @@ const APP_SHELL = [
   'configuration-electronique.html',
   'orbitale-moleculaire.html',
   'reaction-redox.html',
+  'faisceau-courbes-ie-3a.html',
   'orbitals/ao-s.png',
   'orbitals/ao-p.png',
   'orbitals/mo-sigmas-bond.png',
